@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VidyāSetu AI Tutor</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600;6..72,700&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-tint": "#565e74",
+                        "on-error": "#ffffff",
+                        "primary-fixed": "#dae2fd",
+                        "on-secondary-fixed": "#002113",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "inverse-surface": "#2d3133",
+                        "surface": "#f7f9fb",
+                        "tertiary-container": "#001a42",
+                        "error-container": "#ffdad6",
+                        "on-background": "#191c1e",
+                        "error": "#ba1a1a",
+                        "secondary-container": "#6cf8bb",
+                        "tertiary-fixed-dim": "#adc6ff",
+                        "on-error-container": "#93000a",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-container-high": "#e6e8ea",
+                        "primary-container": "#131b2e",
+                        "on-secondary-container": "#00714d",
+                        "on-tertiary-container": "#3980f4",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-primary": "#bec6e0",
+                        "surface-variant": "#e0e3e5",
+                        "secondary-fixed-dim": "#4edea3",
+                        "background": "#f7f9fb",
+                        "on-surface": "#191c1e",
+                        "tertiary": "#000000",
+                        "on-surface-variant": "#45464d",
+                        "on-secondary": "#ffffff",
+                        "surface-dim": "#d8dadc",
+                        "secondary": "#006c49",
+                        "on-tertiary-fixed": "#001a42",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed": "#d8e2ff",
+                        "outline-variant": "#c6c6cd",
+                        "on-secondary-fixed-variant": "#005236",
+                        "surface-container": "#eceef0",
+                        "secondary-fixed": "#6ffbbe",
+                        "primary": "#000000",
+                        "surface-bright": "#f7f9fb",
+                        "on-tertiary-fixed-variant": "#004395",
+                        "on-primary-fixed": "#131b2e",
+                        "on-primary": "#ffffff",
+                        "outline": "#76777d",
+                        "on-primary-container": "#7c839b",
+                        "primary-fixed-dim": "#bec6e0"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-desktop": "40px",
+                        "base": "8px",
+                        "margin-mobile": "16px",
+                        "gutter": "24px",
+                        "container-max": "1280px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Newsreader"],
+                        "body-md": ["Manrope"],
+                        "headline-lg": ["Newsreader"],
+                        "body-lg": ["Manrope"],
+                        "display-lg": ["Newsreader"],
+                        "label-md": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "500"}],
+                        "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "1.1", "fontWeight": "600"}],
+                        "label-md": ["14px", {"lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Manrope', sans-serif;
+            background-color: #f7f9fb;
+        }
+        .serif {
+            font-family: 'Newsreader', serif;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .ai-node-glow {
+            border: 1px solid transparent;
+            background: linear-gradient(white, white) padding-box,
+                        linear-gradient(to right, #006c49, #6ffbbe) border-box;
+        }
+    </style>
+</head>
+<body class="text-on-surface">
+<!-- Sidebar Navigation Shell -->
+<aside class="fixed left-0 top-0 h-full flex flex-col py-6 bg-slate-50 dark:bg-slate-950 h-screen w-64 border-r border-slate-200 dark:border-slate-800 z-40">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-secondary flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-lg">link</span>
+</div>
+<div>
+<h1 class="text-xl font-bold text-slate-900 dark:text-slate-50 font-headline-md leading-none">VidyāSetu</h1>
+<p class="text-[10px] uppercase tracking-widest text-secondary font-semibold">AI Learning Bridge</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all rounded-lg font-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-r-4 border-emerald-600 font-medium transition-all rounded-lg font-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+<span>AI Tutor</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all rounded-lg font-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="insights">insights</span>
+<span>Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all rounded-lg font-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="local_library">local_library</span>
+<span>Library</span>
+</a>
+</nav>
+<div class="px-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+<button class="w-full py-3 px-4 bg-primary text-on-primary rounded-xl font-label-md flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-primary/10">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+<span>Start New Session</span>
+</button>
+</div>
+<div class="mt-auto px-3 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all rounded-lg font-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span>Help Center</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all rounded-lg font-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 h-screen flex overflow-hidden">
+<!-- Left Panel: Session History & Tags -->
+<section class="w-72 border-r border-slate-200 bg-surface-container-lowest overflow-y-auto flex flex-col">
+<div class="p-6">
+<h2 class="font-headline-md text-headline-md text-slate-900 mb-4">Sessions</h2>
+<div class="relative mb-6">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-lg text-sm focus:ring-2 focus:ring-secondary/20" placeholder="Search sessions..." type="text"/>
+</div>
+<div class="space-y-6">
+<div>
+<p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Recent</p>
+<div class="space-y-2">
+<div class="p-3 rounded-xl bg-secondary-container/10 border border-secondary-container/30 cursor-pointer">
+<p class="font-label-md text-secondary leading-tight mb-1">Quantum Mechanics Basics</p>
+<p class="text-[11px] text-slate-500">24 mins ago • 12 sources</p>
+</div>
+<div class="p-3 rounded-xl hover:bg-surface-container-low transition-colors cursor-pointer border border-transparent">
+<p class="font-label-md text-slate-700 leading-tight mb-1">Macroeconomics Principles</p>
+<p class="text-[11px] text-slate-500">Yesterday • 5 sources</p>
+</div>
+</div>
+</div>
+<div>
+<p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Topic Tags</p>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-primary-fixed text-on-primary-fixed text-xs font-medium rounded-full">Physics</span>
+<span class="px-3 py-1 bg-surface-container-high text-on-surface-variant text-xs font-medium rounded-full">Exam Prep</span>
+<span class="px-3 py-1 bg-surface-container-high text-on-surface-variant text-xs font-medium rounded-full">Calculus</span>
+<span class="px-3 py-1 bg-surface-container-high text-on-surface-variant text-xs font-medium rounded-full">Logic</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Center Panel: Main Chat Flow -->
+<section class="flex-1 flex flex-col bg-surface relative">
+<!-- Header -->
+<header class="h-16 border-b border-slate-200 flex items-center justify-between px-8 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+<div class="flex items-center gap-4">
+<div class="flex -space-x-2">
+<img alt="Tutor" class="w-8 h-8 rounded-full border-2 border-white object-cover" data-alt="portrait of a young female educator smiling in a bright office environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD2YlJR5ASjZJyCBi_a8dTvxSwn0C_edsOe2NxhyCWC0jXbwc5jwDbH3W4IwaTQmyRw76GNU5unpZyUHqxHg0qwti_S0VuqabWDqWdRvNSUSgSoMVuvTmHzGq-e5rym3ECozCOoSpAimjxSOgDuWraX5AtupTrwnufiCkGVXqsrAwgEGeKnNERfTYVj2wwM-lyiaGcobPqPSpVWX-U_hM7KtE4wBIojnjbwJ1k1scvKAdhrqXuc3Uy8CP7Ssnc4mDvauEjZE-RdKrg"/>
+</div>
+<div>
+<h3 class="font-headline-md text-slate-900 text-lg leading-none">Quantum Mechanics Basics</h3>
+<p class="text-xs text-secondary font-medium">Session Active • High Focus Mode</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 text-slate-400 hover:text-slate-600 transition-colors">
+<span class="material-symbols-outlined" data-icon="share">share</span>
+</button>
+<button class="p-2 text-slate-400 hover:text-slate-600 transition-colors">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</header>
+<!-- Chat Messages -->
+<div class="flex-1 overflow-y-auto p-8 space-y-8">
+<!-- User Message -->
+<div class="flex flex-col items-end">
+<div class="max-w-2xl bg-primary text-on-primary p-4 rounded-2xl rounded-tr-none shadow-md">
+<p class="font-body-md">Can you explain the Schrödinger's cat thought experiment? I'm having trouble understanding the concept of superposition in this context.</p>
+</div>
+<span class="text-[10px] text-slate-400 mt-2 mr-2">10:42 AM</span>
+</div>
+<!-- AI Response -->
+<div class="flex flex-col items-start">
+<div class="max-w-3xl ai-node-glow glass-panel p-6 rounded-2xl rounded-tl-none shadow-sm space-y-4">
+<div class="flex items-center gap-2 mb-2">
+<div class="w-6 h-6 rounded-full bg-secondary flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px] text-white" data-icon="psychology" data-weight="fill">psychology</span>
+</div>
+<span class="font-label-md text-secondary">VidyāSetu AI</span>
+</div>
+<h4 class="font-headline-md text-slate-900 text-xl">The Schrödinger's Cat Paradox</h4>
+<p class="font-body-md text-slate-700">The Schrödinger's cat thought experiment was devised in 1935 to illustrate the problem of the Copenhagen interpretation of quantum mechanics when applied to everyday objects. Here is a step-by-step breakdown:</p>
+<div class="space-y-4 border-l-2 border-secondary/20 pl-4 py-2">
+<div>
+<h5 class="font-label-md text-slate-900 mb-1">1. The Setup</h5>
+<p class="text-sm text-slate-600">Imagine a cat placed in a sealed steel box, along with a Geiger counter, a vial of poison, and a radioactive source.</p>
+</div>
+<div>
+<h5 class="font-label-md text-slate-900 mb-1">2. The Trigger</h5>
+<p class="text-sm text-slate-600">If the radioactive substance decays, the Geiger counter detects it and releases the poison, killing the cat.</p>
+</div>
+<div>
+<h5 class="font-label-md text-slate-900 mb-1">3. The Superposition</h5>
+<p class="text-sm text-slate-600">According to quantum mechanics, the radioactive atom is in a superposition—both decayed and not decayed—until observed. Therefore, the cat is simultaneously dead and alive.</p>
+</div>
+</div>
+<div class="bg-primary-container p-4 rounded-xl">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[10px] font-bold text-on-primary-container uppercase tracking-widest">Mathematical Representation</span>
+<span class="material-symbols-outlined text-on-primary-container text-sm">content_copy</span>
+</div>
+<code class="text-emerald-400 font-mono text-sm">
+                                |ψ⟩ = 1/√2 (|alive⟩ + |dead⟩)
+                            </code>
+</div>
+<p class="font-body-md text-slate-700">The paradox highlights the "measurement problem": at what point does a quantum system stop being a mixture of states and become one or the other?</p>
+<div class="flex gap-2 pt-2">
+<button class="px-3 py-1 border border-slate-200 rounded-full text-xs font-medium text-slate-500 hover:bg-slate-50">Tell me more about "The Observer"</button>
+<button class="px-3 py-1 border border-slate-200 rounded-full text-xs font-medium text-slate-500 hover:bg-slate-50">Relate this to Qubits</button>
+</div>
+</div>
+<span class="text-[10px] text-slate-400 mt-2 ml-2">10:43 AM • Ref: Source [1], [3]</span>
+</div>
+</div>
+<!-- Bottom: Natural Language Input -->
+<div class="p-6 bg-white border-t border-slate-200">
+<div class="max-w-4xl mx-auto">
+<div class="relative flex items-center gap-4 bg-surface-container-low rounded-2xl p-2 pl-4 border border-slate-200 focus-within:ring-2 focus-within:ring-secondary/20 transition-all">
+<button class="text-slate-400 hover:text-secondary transition-colors">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+</button>
+<input class="flex-1 bg-transparent border-none focus:ring-0 text-sm py-3" placeholder="Ask me anything about this session..." type="text"/>
+<div class="flex items-center gap-1 pr-2">
+<button class="p-2 text-slate-400 hover:text-secondary transition-colors">
+<span class="material-symbols-outlined" data-icon="mic">mic</span>
+</button>
+<button class="bg-secondary text-white p-2 rounded-xl flex items-center justify-center hover:bg-on-secondary-container transition-all">
+<span class="material-symbols-outlined" data-icon="send">send</span>
+</button>
+</div>
+</div>
+<div class="mt-2 flex justify-center">
+<p class="text-[10px] text-slate-400">Press <kbd class="px-1 bg-slate-100 rounded">Shift</kbd> + <kbd class="px-1 bg-slate-100 rounded">Enter</kbd> for new line</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Panel: Context / Source Documents -->
+<section class="w-80 border-l border-slate-200 bg-surface-container-low overflow-y-auto">
+<div class="p-6">
+<div class="flex items-center justify-between mb-6">
+<h2 class="font-headline-md text-headline-md text-slate-900">Knowledge</h2>
+<span class="text-[10px] font-bold text-secondary bg-secondary/10 px-2 py-0.5 rounded">3 SOURCES</span>
+</div>
+<div class="space-y-4">
+<!-- Source Card 1 -->
+<div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+<div class="flex items-start gap-3 mb-2">
+<div class="w-10 h-10 rounded bg-red-50 flex items-center justify-center text-red-500">
+<span class="material-symbols-outlined">picture_as_pdf</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-xs font-bold text-slate-900 truncate">Quantum_Mechanics_Lectures_Vol1.pdf</p>
+<p class="text-[10px] text-slate-400">Stanford University • 4.2MB</p>
+</div>
+</div>
+<div class="mt-3 bg-slate-50 p-2 rounded text-[11px] text-slate-600 line-clamp-3 italic">
+                            "...the wave function collapse occurs upon interaction with a macroscopic object, famously debated through the feline thought experiment..."
+                        </div>
+<div class="mt-3 flex items-center justify-between">
+<span class="text-[10px] font-medium text-slate-400">Used in response [1]</span>
+<button class="text-xs text-secondary font-bold hover:underline">View File</button>
+</div>
+</div>
+<!-- Source Card 2 -->
+<div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm opacity-75 grayscale hover:grayscale-0 transition-all cursor-pointer">
+<div class="flex items-start gap-3 mb-2">
+<div class="w-10 h-10 rounded bg-blue-50 flex items-center justify-center text-blue-500">
+<span class="material-symbols-outlined">link</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-xs font-bold text-slate-900 truncate">Copenhagen Interpretation Wiki</p>
+<p class="text-[10px] text-slate-400">External Web Resource</p>
+</div>
+</div>
+</div>
+<!-- Source Card 3 -->
+<div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+<div class="flex items-start gap-3 mb-2">
+<div class="w-10 h-10 rounded bg-emerald-50 flex items-center justify-center text-emerald-500">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-xs font-bold text-slate-900 truncate">Superposition_Deep_Dive.docx</p>
+<p class="text-[10px] text-slate-400">Personal Notes • 12KB</p>
+</div>
+</div>
+</div>
+<!-- Upload Placeholder -->
+<div class="border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-slate-400 hover:border-secondary/30 hover:text-secondary transition-all cursor-pointer">
+<span class="material-symbols-outlined mb-2">cloud_upload</span>
+<p class="text-[10px] font-bold uppercase tracking-wider">Add Context Source</p>
+</div>
+</div>
+<div class="mt-8">
+<div class="bg-gradient-to-br from-primary-container to-slate-900 p-5 rounded-2xl text-white relative overflow-hidden">
+<div class="relative z-10">
+<p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Session Goal</p>
+<p class="font-headline-md text-lg leading-tight mb-4">Master Quantum States &amp; Paradoxes</p>
+<div class="w-full bg-white/20 h-1 rounded-full overflow-hidden">
+<div class="bg-emerald-400 h-full w-[65%]"></div>
+</div>
+<p class="text-[10px] mt-2 text-white/60">65% of learning bridge completed</p>
+</div>
+<!-- Background decoration -->
+<div class="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+</div>
+</div>
+</div>
+</section>
+</main>
+</body></html>

@@ -1,0 +1,10 @@
+# Ignore the Virtual Environment (Huge folder)
+venv/
+__pycache__/
+
+# Ignore Environment Variables (API Keys - Safety Risk!)
+.env
+
+# Ignore system files
+.DS_Store
+*.pyc

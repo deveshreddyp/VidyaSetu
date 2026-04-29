@@ -1,0 +1,16 @@
+CONCEPT: Machine Learning
+DEFINITION: Machine Learning is a subset of artificial intelligence that focuses on building systems that learn from data.
+PREREQUISITES: Linear Algebra, Calculus, Python Programming.
+
+CONCEPT: Supervised Learning
+DEFINITION: A type of machine learning where the model is trained on labeled data.
+PREREQUISITES: Machine Learning, Statistics.
+INCLUDES: Regression, Classification.
+
+CONCEPT: Linear Regression
+DEFINITION: A linear approach for modeling the relationship between a scalar response and one or more explanatory variables.
+PREREQUISITES: Supervised Learning, Linear Algebra.
+
+CONCEPT: Neural Networks
+DEFINITION: A series of algorithms that endeavor to recognize underlying relationships in a set of data through a process that mimics the way the human brain operates.
+PREREQUISITES: Calculus, Linear Regression.

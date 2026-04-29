@@ -1,0 +1,10 @@
+chainlit
+llama-index
+llama-index-llms-groq
+llama-index-embeddings-huggingface
+llama-index-vector-stores-chroma
+chromadb
+networkx
+pyvis
+python-dotenv
+pysqlite3-binary
