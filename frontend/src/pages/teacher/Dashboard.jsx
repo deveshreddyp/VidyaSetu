@@ -69,59 +69,86 @@ export default function TeacherDashboard() {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       
+      const validSheets = [
+        'UG-CSE', 'UG-ISE', 'UG-AIDS', 'UG-CSDS', 
+        'UG-ECE', 'UG-AIML', 'UG-CSAIML'
+      ];
+      
       let addCount = 0;
       let updateCount = 0;
 
       for (const sheetName of workbook.SheetNames) {
-        const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-        for (const row of sheetData) {
-          const keys = Object.keys(row);
-          const emailKey = keys.find(k => k.toLowerCase().includes('email'));
-          const nameKey = keys.find(k => k.toLowerCase().includes('name'));
-          const usnKey = keys.find(k => k.toLowerCase().includes('usn'));
+        if (!validSheets.includes(sheetName)) continue;
+        
+        const sheet = workbook.Sheets[sheetName];
+        const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        
+        if (data.length < 5) continue;
+        
+        const subjectNames = data[1]; // Row 2
+        const maxMarks = data[2];     // Row 3
+        const passMarks = data[3];    // Row 4
+        
+        let emailIndex = -1;
+        for (let i = 0; i < data[0].length; i++) {
+          if (String(data[0][i]).toLowerCase().includes('email')) {
+            emailIndex = i;
+            break;
+          }
+        }
+        
+        if (emailIndex === -1) continue;
+
+        for (let r = 4; r < data.length; r++) {
+          const row = data[r];
+          if (!row || row.length === 0) continue;
           
-          const email = emailKey && row[emailKey] ? String(row[emailKey]).trim() : null;
-          if (!email) continue;
+          const email = row[emailIndex] ? String(row[emailIndex]).trim() : null;
+          if (!email || !email.includes('@')) continue;
 
           const results = [];
-          keys.forEach(k => {
-            const kl = k.toLowerCase();
-            if (!kl.includes('email') && !kl.includes('name') && !kl.includes('usn') && !kl.includes('phone') && !kl.includes('mobile')) {
-              if (typeof row[k] === 'number' || (!isNaN(Number(row[k])) && String(row[k]).trim() !== '')) {
-                let max = 100;
-                if (kl.includes('iat')) max = 50;
-                const markValue = Number(row[k]);
-                results.push({ 
-                  subject: k, 
-                  mark: markValue, 
-                  max: max,
-                  isPass: markValue >= (max * 0.4)
+          
+          for (let c = 0; c < subjectNames.length; c++) {
+            if (c === emailIndex || c < 5) continue;
+            
+            const subjName = subjectNames[c];
+            const markVal = row[c];
+            const maxMark = maxMarks[c];
+            const passMark = passMarks[c];
+            
+            if (subjName && typeof subjName === 'string' && !subjName.toLowerCase().includes('level') && !subjName.toLowerCase().includes('empty')) {
+              if (typeof markVal === 'number' && typeof maxMark === 'number' && typeof passMark === 'number') {
+                results.push({
+                  subject: subjName.trim(),
+                  mark: markVal,
+                  max: maxMark,
+                  isPass: markVal >= passMark
                 });
               }
             }
-          });
+          }
+
+          const nameCol = data[0].findIndex(h => String(h).toLowerCase().includes('name'));
+          const usnCol = data[0].findIndex(h => String(h).toLowerCase().includes('usn'));
 
           const studentData = {
             email: email,
-            name: nameKey && row[nameKey] ? String(row[nameKey]) : email.split('@')[0],
-            usn: usnKey && row[usnKey] ? String(row[usnKey]) : '',
+            name: nameCol !== -1 && row[nameCol] ? String(row[nameCol]) : email.split('@')[0],
+            usn: usnCol !== -1 && row[usnCol] ? String(row[usnCol]) : '',
             role: 'student',
             section: sheetName,
             results: results,
           };
 
-          // Try to find existing user doc by email and merge results into it
           const emailQuery = query(collection(db, 'users'), where('email', '==', email));
           const emailSnap = await getDocs(emailQuery);
           
           if (!emailSnap.empty) {
-            // Update existing user doc(s) with results
             for (const existingDoc of emailSnap.docs) {
               await setDoc(doc(db, 'users', existingDoc.id), { results: results, section: sheetName }, { merge: true });
             }
             updateCount++;
           } else {
-            // No existing user — create a new doc
             const newDocRef = doc(collection(db, 'users'));
             await setDoc(newDocRef, { ...studentData, createdAt: new Date().toISOString() });
             addCount++;
