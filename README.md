@@ -118,4 +118,4 @@ npm install
 
 ---
 
-*Built with ❤️ for student success.*
+*Built with ❤️ for student success.* *
