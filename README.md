@@ -1,11 +1,11 @@
-# VidyaSetu 🎓🚀
+# VidyaSetu 
 **Bridging Academics and Industry Readiness**
 
 VidyaSetu is an AI-powered college analytics and career acceleration platform. It bridges the gap between academic performance and industry readiness by providing real-time result tracking, personalized AI tutoring, and advanced career preparation tools like ATS resume analysis, automated cover letter generation, and custom career roadmaps.
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
 ### For Students (Learners & Job Seekers)
 - **Real-Time Performance Dashboard**: Instantly track internal assessment (IAT) marks and overall academic standing.
@@ -21,7 +21,7 @@ VidyaSetu is an AI-powered college analytics and career acceleration platform. I
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Frontend**: React.js, Tailwind CSS, Vite, Recharts, Lucide Icons, Web Speech API.
 - **Backend**: Node.js, Express.js.
@@ -30,7 +30,7 @@ VidyaSetu is an AI-powered college analytics and career acceleration platform. I
 
 ---
 
-## 🔄 User Flow
+## User Flow
 
 1. **Teacher Uploads Data**: The teacher logs into the Admin/Teacher portal and uploads an Excel sheet containing the students' marks and emails.
 2. **Student Onboarding**: The student logs in using the email provided in the college records.
@@ -45,7 +45,7 @@ VidyaSetu is an AI-powered college analytics and career acceleration platform. I
 
 ---
 
-## 🚀 Installation & Local Setup
+## Installation & Local Setup
 
 ### Prerequisites
 - Node.js (v18+)
@@ -96,7 +96,7 @@ npm install
 
 ---
 
-## 📖 User Guide
+## User Guide
 
 ### How to use the Teacher Dashboard
 1. Log in with a teacher account.
