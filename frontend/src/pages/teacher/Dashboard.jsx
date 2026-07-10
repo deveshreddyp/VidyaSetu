@@ -1117,9 +1117,7 @@ export default function TeacherDashboard() {
         </div>
       )}
 
-    </div>
-
-    {/* Student Slide-out Panel */}
+      {/* Student Slide-out Panel */}
       {activeStudent && (
         <>
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 transition-opacity" onClick={() => setActiveStudent(null)}></div>
