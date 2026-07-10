@@ -723,7 +723,7 @@ export default function TeacherDashboard() {
                     <option value="Level 4">Level 4</option>
                     <option value="Level 3">Level 3</option>
                     <option value="Level 2">Level 2</option>
-                    <option value="Unranked">Unranked</option>
+                    <option value="Ineligible for Placements">Ineligible for Placements</option>
                   </select>
                   <select 
                     value={coreFilter} 

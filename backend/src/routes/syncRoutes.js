@@ -157,7 +157,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         const results = Array.from(resultsMap.values());
 
         // Calculate Student Level
-        let studentLevel = "Unranked";
+        let studentLevel = "Ineligible for Placements";
         const lx = lxIndex !== -1 ? parseFloat(row[lxIndex]) || 0 : 0;
         const ax = axIndex !== -1 ? parseFloat(row[axIndex]) || 0 : 0;
         const cx = cxIndex !== -1 ? parseFloat(row[cxIndex]) || 0 : 0;
