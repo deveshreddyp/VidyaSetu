@@ -40,9 +40,7 @@ export default function Login() {
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex-col justify-center px-16 relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDE4YzMuMzEgMCA2IDIuNjkgNiA2cy0yLjY5IDYtNiA2LTYtMi42OS02LTYgMi42OS02IDYtNiIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
         <div className="relative z-10 animate-fade-in-up">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center mb-8 shadow-glow-purple">
-            <span className="material-symbols-outlined text-white text-3xl">link</span>
-          </div>
+          <img src="/logo.jpeg" alt="VidyaSetu Logo" className="w-16 h-16 object-contain rounded-xl shadow-glow-purple bg-white p-1 mb-8" />
           <h1 className="text-5xl font-headline-md text-white font-bold leading-tight mb-4">
             Welcome to<br /><span className="text-gradient">VidyaSetu AI</span>
           </h1>
@@ -65,9 +63,7 @@ export default function Login() {
           
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center mx-auto mb-3 shadow-glow-purple">
-              <span className="material-symbols-outlined text-white text-2xl">link</span>
-            </div>
+            <img src="/logo.jpeg" alt="VidyaSetu Logo" className="w-14 h-14 object-contain rounded-xl shadow-glow-purple bg-white p-1 mx-auto mb-3" />
             <h2 className="text-2xl font-headline-md text-slate-900 font-bold">VidyaSetu AI</h2>
           </div>
 

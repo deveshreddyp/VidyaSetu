@@ -448,9 +448,7 @@ export default function TeacherDashboard() {
       {/* Sidebar */}
       <aside className="w-64 bg-slate-900 text-slate-300 flex-col transition-all duration-300 hidden md:flex">
         <div className="p-6 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-glow-purple">
-            <span className="material-symbols-outlined text-white text-xl">link</span>
-          </div>
+          <img src="/logo.jpeg" alt="VidyaSetu Logo" className="w-12 h-12 object-contain rounded-md shadow-sm bg-white p-1" />
           <div>
             <h1 className="text-xl font-bold text-white font-headline-md tracking-wide">VidyaSetu</h1>
             <p className="text-[10px] uppercase tracking-widest text-primary-fixed">Teacher Portal</p>
@@ -495,9 +493,7 @@ export default function TeacherDashboard() {
           <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col transition-all duration-300 relative z-50 h-full">
             <div className="p-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-glow-purple">
-                  <span className="material-symbols-outlined text-white text-xl">link</span>
-                </div>
+                <img src="/logo.jpeg" alt="VidyaSetu Logo" className="w-12 h-12 object-contain rounded-md shadow-sm bg-white p-1" />
                 <div>
                   <h1 className="text-xl font-bold text-white font-headline-md tracking-wide">VidyaSetu</h1>
                   <p className="text-[10px] uppercase tracking-widest text-primary-fixed">Teacher Portal</p>
