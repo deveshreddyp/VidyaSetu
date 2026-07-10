@@ -57,14 +57,20 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       let usnIndex = -1;
       let sectionIndex = -1;
       let branchIndex = -1;
+      let lxIndex = -1, axIndex = -1, cxIndex = -1, pxIndex = -1, sxIndex = -1;
 
       for (let i = 0; i < headerRow.length; i++) {
-        const h = String(headerRow[i] || '').toLowerCase();
+        const h = String(headerRow[i] || '').trim().toLowerCase();
         if (h.includes('email')) emailIndex = i;
         if (h.includes('name')) nameIndex = i;
         if (h.includes('usn')) usnIndex = i;
         if (h.includes('section')) sectionIndex = i;
         if (h.includes('branch')) branchIndex = i;
+        if (h === 'lx') lxIndex = i;
+        if (h === 'ax') axIndex = i;
+        if (h === 'cx') cxIndex = i;
+        if (h === 'px') pxIndex = i;
+        if (h === 'sx') sxIndex = i;
       }
       
       if (emailIndex === -1) continue;
@@ -150,6 +156,26 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         
         const results = Array.from(resultsMap.values());
 
+        // Calculate Student Level
+        let studentLevel = "Unranked";
+        const lx = lxIndex !== -1 ? parseFloat(row[lxIndex]) || 0 : 0;
+        const ax = axIndex !== -1 ? parseFloat(row[axIndex]) || 0 : 0;
+        const cx = cxIndex !== -1 ? parseFloat(row[cxIndex]) || 0 : 0;
+        const px = pxIndex !== -1 ? parseFloat(row[pxIndex]) || 0 : 0;
+        const sx = sxIndex !== -1 ? parseFloat(row[sxIndex]) || 0 : 0;
+
+        if (lx >= 4 && sx >= 4 && ax >= 4 && px >= 4 && cx >= 4) {
+          studentLevel = "Level 5";
+        } else if (lx >= 4 && sx >= 4 && ax >= 4 && px >= 4 && cx >= 3) {
+          studentLevel = "Level 4";
+        } else if (lx >= 4 && sx >= 3 && ax >= 3 && px >= 3.5 && cx >= 3) {
+          studentLevel = "Level 3";
+        } else if (lx >= 4 && sx >= 3 && ax >= 3 && px >= 2 && cx >= 4) {
+          studentLevel = "Core";
+        } else if (lx >= 4 && sx >= 3 && ax >= 3 && px >= 3 && cx >= 2) {
+          studentLevel = "Level 2";
+        }
+
         const name = nameIndex !== -1 && row[nameIndex] ? String(row[nameIndex]) : email.split('@')[0];
         const studentData = {
           email: email,
@@ -159,6 +185,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
           branch: branchIndex !== -1 && row[branchIndex] ? String(row[branchIndex]) : sheetName,
           actualSection: sectionIndex !== -1 && row[sectionIndex] ? String(row[sectionIndex]) : '', // Store actual A/B/C/D section separately just in case
           role: 'student',
+          studentLevel: studentLevel,
           results: results,
           updatedAt: new Date().toISOString()
         };
