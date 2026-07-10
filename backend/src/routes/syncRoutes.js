@@ -155,8 +155,9 @@ router.post('/upload', upload.single('file'), async (req, res) => {
           email: email,
           name: name,
           usn: usnIndex !== -1 && row[usnIndex] ? String(row[usnIndex]) : '',
-          section: sectionIndex !== -1 && row[sectionIndex] ? String(row[sectionIndex]) : sheetName,
+          section: sheetName, // User treats UG-CSE as the section
           branch: branchIndex !== -1 && row[branchIndex] ? String(row[branchIndex]) : sheetName,
+          actualSection: sectionIndex !== -1 && row[sectionIndex] ? String(row[sectionIndex]) : '', // Store actual A/B/C/D section separately just in case
           role: 'student',
           results: results,
           updatedAt: new Date().toISOString()
