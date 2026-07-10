@@ -6,6 +6,7 @@ const tutorRoutes = require('./routes/tutorRoutes');
 const generatorRoutes = require('./routes/generatorRoutes');
 const resumeRoutes = require('./routes/resumeRoutes');
 const firestoreRoutes = require('./routes/firestoreRoutes');
+const webhookRoutes = require('./routes/webhookRoutes');
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use('/api/pathfinder', tutorRoutes);
 app.use('/api/generator', generatorRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/db', firestoreRoutes);
+app.use('/api/webhooks', webhookRoutes);
 
 // Health Check
 app.get('/', (req, res) => {
