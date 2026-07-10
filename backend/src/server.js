@@ -7,6 +7,7 @@ const generatorRoutes = require('./routes/generatorRoutes');
 const resumeRoutes = require('./routes/resumeRoutes');
 const firestoreRoutes = require('./routes/firestoreRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
+const syncRoutes = require('./routes/syncRoutes');
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use('/api/generator', generatorRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/db', firestoreRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/sync', syncRoutes);
 
 // Health Check
 app.get('/', (req, res) => {
