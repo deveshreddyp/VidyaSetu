@@ -26,6 +26,52 @@ import {
   Trophy
 } from 'lucide-react';
 
+const PremiumSelect = ({ value, onChange, options, icon: Icon, className = '' }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find(o => o.value === value) || options[0];
+
+  return (
+    <div className={`relative ${className}`} ref={dropdownRef}>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between gap-2 bg-surface-container-low hover:bg-slate-100 text-sm rounded-xl py-2 px-4 text-slate-600 cursor-pointer shadow-sm transition-all min-w-[140px]"
+      >
+        <div className="flex items-center gap-2 truncate">
+          {Icon && <Icon className="w-4 h-4 text-slate-400" />}
+          <span className="font-medium text-slate-700 truncate">{selectedOption?.label || value}</span>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </div>
+      
+      {isOpen && (
+        <div className="absolute top-full mt-2 right-0 min-w-full w-max bg-white rounded-xl shadow-xl border border-slate-100 py-2 z-50 animate-fade-in-up max-h-60 overflow-y-auto">
+          {options.map((opt, i) => (
+            <div 
+              key={i}
+              onClick={() => { onChange(opt.value); setIsOpen(false); }}
+              className={`px-4 py-2 text-sm cursor-pointer hover:bg-primary/5 transition-colors ${value === opt.value ? 'bg-primary/5 text-primary font-bold' : 'text-slate-600 font-medium'}`}
+            >
+              {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 
 // Mock data removed, now using real Firestore data
 
