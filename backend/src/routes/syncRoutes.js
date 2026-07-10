@@ -194,18 +194,25 @@ router.post('/upload', upload.single('file'), async (req, res) => {
           updatedAt: new Date().toISOString()
         };
 
-        // CREATE AUTH ACCOUNT (If not exists)
-        if (!existingUsersMap.has(email)) {
-          try {
-            await admin.auth().createUser({
-              email: email,
-              password: 'password12345678', // Default password requested
-              displayName: name,
-            });
-            authCreatedCount++;
-          } catch (error) {
-            if (error.code !== 'auth/email-already-exists') {
-              console.error(`Auth creation failed for ${email}:`, error.message);
+        // CREATE AUTH ACCOUNT (If not exists in Firebase Auth)
+        // Note: we check Auth directly — NOT just Firestore — because old imports
+        // may have written Firestore docs without creating Auth accounts.
+        try {
+          await admin.auth().getUserByEmail(email);
+          // User already exists in Auth — no action needed
+        } catch (authError) {
+          if (authError.code === 'auth/user-not-found') {
+            try {
+              await admin.auth().createUser({
+                email: email,
+                password: 'password12345678', // Default password
+                displayName: name,
+              });
+              authCreatedCount++;
+            } catch (createError) {
+              if (createError.code !== 'auth/email-already-exists') {
+                console.error(`Auth creation failed for ${email}:`, createError.message);
+              }
             }
           }
         }
