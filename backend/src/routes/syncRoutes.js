@@ -76,51 +76,79 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         const email = row[emailIndex] ? String(row[emailIndex]).trim() : null;
         if (!email || !email.includes('@')) continue;
 
-        const results = [];
+        const resultsMap = new Map();
         
         for (let c = 0; c < subjectNames.length; c++) {
           if (c === emailIndex || c < 5) continue; // Skip metadata columns
           
-          const subjName = subjectNames[c];
+          let subjName = subjectNames[c];
+          if (!subjName || typeof subjName !== 'string') continue;
+          subjName = subjName.trim();
+          
+          if (subjName.toLowerCase().includes('level') || subjName.toLowerCase().includes('empty')) continue;
+          
+          // Feature requested: "there is no c5" -> completely ignore any subject with c5
+          if (subjName.toLowerCase().includes('c5')) continue;
+          
           const rawMarkVal = row[c];
           let markVal = parseFloat(rawMarkVal);
-          
           let maxMark = parseFloat(maxMarks[c]);
           let passMark = parseFloat(passMarks[c]);
           
-          if (subjName && typeof subjName === 'string') {
-            if (subjName.trim() === 'C2 Full') maxMark = 25; // hardcoded fix
-            
-            if (!subjName.toLowerCase().includes('level') && !subjName.toLowerCase().includes('empty')) {
-              // Only push if the mark is actually a number, OR if they want it included even if it's absent.
-              // To handle "A4" being absent, we should check if subjName is valid.
-              // If the mark is literally blank in Excel, rawMarkVal will be undefined.
-              if (rawMarkVal !== undefined && rawMarkVal !== null && !isNaN(markVal) && !isNaN(maxMark) && !isNaN(passMark)) {
-                results.push({
-                  subject: subjName.trim(),
-                  mark: markVal,
-                  max: maxMark,
-                  pass: passMark,
-                  isPass: markVal >= passMark
-                });
-              } else if (rawMarkVal === undefined || rawMarkVal === null || isNaN(markVal)) {
-                // Feature requested: "there is no a4 in the sheet". We still want the subject recorded as 0 or missed if it's in the header!
-                // Actually, if it's missing, maybe we shouldn't push it, or we push it as Absent?
-                // Let's push it as mark: 0, isPass: false so it shows up in their dashboard!
-                if (!isNaN(maxMark) && !isNaN(passMark)) {
-                  results.push({
-                    subject: subjName.trim(),
-                    mark: 0,
-                    max: maxMark,
-                    pass: passMark,
-                    isPass: false,
-                    isAbsent: true // Custom flag for UI
-                  });
-                }
-              }
+          if (subjName === 'C2 Full') maxMark = 25; // hardcoded fix
+          
+          let isAbsent = false;
+          if (rawMarkVal === undefined || rawMarkVal === null || isNaN(markVal)) {
+            if (!isNaN(maxMark) && !isNaN(passMark)) {
+              markVal = 0;
+              isAbsent = true;
+            } else {
+              continue; // skip if max/pass marks are invalid
             }
           }
+          
+          if (isNaN(maxMark) || isNaN(passMark)) continue;
+          
+          // Feature requested: "update the logic as if any one p3 is pass then it is pass"
+          // We will merge all P3 subjects (e.g. P3-Python, P3-Java) into a single "P3" subject.
+          if (subjName.toUpperCase().startsWith('P3')) {
+            const isPass = markVal >= passMark;
+            const existingP3 = resultsMap.get('P3');
+            
+            if (!existingP3) {
+              resultsMap.set('P3', {
+                subject: 'P3',
+                mark: markVal,
+                max: maxMark,
+                pass: passMark,
+                isPass: isPass,
+                isAbsent: isAbsent
+              });
+            } else {
+              // If ANY P3 is passed, the whole P3 group is passed
+              if (isPass) {
+                existingP3.isPass = true;
+              }
+              // Keep the highest mark among the P3 options
+              if (markVal > existingP3.mark) {
+                existingP3.mark = markVal;
+                existingP3.isAbsent = isAbsent; // if highest mark is no longer absent
+              }
+            }
+            continue;
+          }
+          
+          resultsMap.set(subjName, {
+            subject: subjName,
+            mark: markVal,
+            max: maxMark,
+            pass: passMark,
+            isPass: markVal >= passMark,
+            isAbsent: isAbsent
+          });
         }
+        
+        const results = Array.from(resultsMap.values());
 
         const name = nameIndex !== -1 && row[nameIndex] ? String(row[nameIndex]) : email.split('@')[0];
         const studentData = {
