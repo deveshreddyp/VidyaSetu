@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { db } from '../../services/firebase';
 import { collection, addDoc, query, where, onSnapshot, orderBy, doc, writeBatch, getDocs, setDoc } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import { 
   LogOut, 
   UploadCloud, 
@@ -18,20 +19,13 @@ import {
   TrendingDown,
   Download,
   X,
+  ChevronDown,
+  Menu,
   Video,
-  Trophy,
-  Menu
+  PlayCircle,
+  Trophy
 } from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  Cell
-} from 'recharts';
+
 
 // Mock data removed, now using real Firestore data
 
@@ -60,7 +54,10 @@ export default function TeacherDashboard() {
   const [coreFilter, setCoreFilter] = useState('All');
   const [analyticsSectionFilter, setAnalyticsSectionFilter] = useState('All');
   const [studentSearch, setStudentSearch] = useState('');
-  const [expandedStudentId, setExpandedStudentId] = useState(null);
+  const [activeStudent, setActiveStudent] = useState(null);
+  const [selectedStudentIds, setSelectedStudentIds] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
   const fileInputRef = React.useRef(null);
   const [isUploadingStudents, setIsUploadingStudents] = useState(false);
 
@@ -170,11 +167,33 @@ export default function TeacherDashboard() {
       subjectCounts[subject] += 1;
     });
 
-    return Object.keys(subjectScores).map(subject => ({
-      name: subject,
-      score: Math.round(subjectScores[subject] / subjectCounts[subject])
-    }));
+    return Object.entries(subjectScores).map(([name, score]) => ({
+      name,
+      score: Math.round(score / subjectCounts[name])
+    })).sort((a, b) => b.score - a.score);
   }, [studentsList, quizResults, analyticsSectionFilter]);
+
+  const computedLevelData = React.useMemo(() => {
+    const counts = { 'Level 5': 0, 'Level 4': 0, 'Level 3': 0, 'Level 2': 0, 'Ineligible for Placements': 0 };
+    
+    const filteredStudents = analyticsSectionFilter === 'All' 
+      ? studentsList 
+      : studentsList.filter(s => s.section === analyticsSectionFilter);
+
+    filteredStudents.forEach(s => {
+      if (counts[s.studentLevel] !== undefined) counts[s.studentLevel]++;
+    });
+
+    return Object.entries(counts).map(([name, value]) => ({ name, value })).filter(d => d.value > 0);
+  }, [studentsList, analyticsSectionFilter]);
+
+  const LEVEL_COLORS = {
+    'Level 5': '#10B981', // Emerald
+    'Level 4': '#3B82F6', // Blue
+    'Level 3': '#8B5CF6', // Violet
+    'Level 2': '#F59E0B', // Amber
+    'Ineligible for Placements': '#EF4444' // Red
+  };
 
   const computedWeakStudents = React.useMemo(() => {
     const weakMap = {};
@@ -324,6 +343,58 @@ export default function TeacherDashboard() {
 
     return matchesSection && matchesSearch && matchesStatus && matchesLevel && matchesCore;
   }), [studentsList, sectionFilter, studentSearch, subjectFilter, statusFilter, levelFilter, coreFilter]);
+
+  // Pagination logic
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [sectionFilter, studentSearch, subjectFilter, statusFilter, levelFilter, coreFilter]);
+
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+  const paginatedStudents = React.useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredStudents.slice(start, start + itemsPerPage);
+  }, [filteredStudents, currentPage]);
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedStudentIds(paginatedStudents.map(s => s.id));
+    } else {
+      setSelectedStudentIds([]);
+    }
+  };
+
+  const handleSelectStudent = (id) => {
+    setSelectedStudentIds(prev => 
+      prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]
+    );
+  };
+
+  const handleExportData = () => {
+    const studentsToExport = studentsList.filter(s => selectedStudentIds.includes(s.id));
+    if (studentsToExport.length === 0) return;
+
+    const data = studentsToExport.map(s => {
+      const row = {
+        'Name': s.name,
+        'Email': s.email,
+        'USN': s.usn,
+        'Section': s.section,
+        'Level': s.studentLevel,
+        'Core Eligibility': s.coreEligibility
+      };
+      if (s.results) {
+        s.results.forEach(res => {
+          row[`${res.subject} Mark`] = res.mark;
+        });
+      }
+      return row;
+    });
+    
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Export");
+    XLSX.writeFile(wb, "Student_Export.xlsx");
+  };
 
   return (
     <div className="flex h-screen bg-mesh font-body-md overflow-hidden text-slate-800">
@@ -607,6 +678,53 @@ export default function TeacherDashboard() {
 
           </section>
 
+          {/* Bottom Row: Level Distribution */}
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1 bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center">
+              <h3 className="font-headline-md text-xl text-slate-900 font-medium mb-2">Level Distribution</h3>
+              <p className="text-xs text-slate-500 mb-6">Overview of student placements</p>
+              <div className="w-full h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={computedLevelData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {computedLevelData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={LEVEL_COLORS[entry.name]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex flex-wrap justify-center gap-3 mt-4">
+                {computedLevelData.map(entry => (
+                  <div key={entry.name} className="flex items-center gap-2 text-xs text-slate-600">
+                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: LEVEL_COLORS[entry.name] }}></span>
+                    {entry.name}: {entry.value}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Can put another chart or placeholder in the remaining space */}
+            <div className="lg:col-span-2 bg-gradient-to-br from-primary/5 to-secondary/5 border border-primary/10 rounded-3xl p-6 flex flex-col items-center justify-center text-center">
+               <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-4 shadow-sm">
+                  <span className="material-symbols-outlined text-3xl text-primary">insights</span>
+               </div>
+               <h3 className="text-xl font-headline-md text-slate-800 font-semibold mb-2">More Insights Coming Soon</h3>
+               <p className="text-sm text-slate-500 max-w-md">We are currently gathering more data to provide you with deeper actionable insights about your classroom's performance.</p>
+            </div>
+          </section>
+
           {/* Bottom Row: Recent Files */}
           <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
             <div className="flex justify-between items-center mb-6">
@@ -684,56 +802,61 @@ export default function TeacherDashboard() {
                       className="pl-9 pr-4 py-2 bg-surface-container-low border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/20 w-48"
                     />
                   </div>
-                  <select 
+                  <PremiumSelect 
                     value={sectionFilter} 
-                    onChange={(e) => setSectionFilter(e.target.value)}
-                    className="bg-surface-container-low border-none text-sm rounded-xl py-2 px-3 text-slate-600 focus:ring-0 cursor-pointer"
-                  >
-                    <option value="All">All Sections</option>
-                    {availableSections.map(sec => (
-                      <option key={sec} value={sec}>{sec}</option>
-                    ))}
-                  </select>
-                  <select 
+                    onChange={setSectionFilter}
+                    options={[
+                      { value: 'All', label: 'All Sections' },
+                      ...availableSections.map(sec => ({ value: sec, label: sec }))
+                    ]}
+                  />
+                  <PremiumSelect 
                     value={subjectFilter} 
-                    onChange={(e) => setSubjectFilter(e.target.value)}
-                    className="bg-surface-container-low border-none text-sm rounded-xl py-2 px-3 text-slate-600 focus:ring-0 cursor-pointer max-w-[150px] truncate"
-                  >
-                    <option value="All">All Subjects</option>
-                    {availableSubjects.map(subj => (
-                      <option key={subj} value={subj}>{subj}</option>
-                    ))}
-                  </select>
-                  <select 
+                    onChange={setSubjectFilter}
+                    options={[
+                      { value: 'All', label: 'All Subjects' },
+                      ...availableSubjects.map(subj => ({ value: subj, label: subj }))
+                    ]}
+                    className="max-w-[150px]"
+                  />
+                  <PremiumSelect 
                     value={statusFilter} 
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="bg-surface-container-low border-none text-sm rounded-xl py-2 px-3 text-slate-600 focus:ring-0 cursor-pointer"
-                  >
-                    <option value="All">All Status</option>
-                    <option value="Passed">Passed</option>
-                    <option value="Failed">Failed</option>
-                  </select>
-                  <select 
+                    onChange={setStatusFilter}
+                    options={[
+                      { value: 'All', label: 'All Status' },
+                      { value: 'Passed', label: 'Passed' },
+                      { value: 'Failed', label: 'Failed' }
+                    ]}
+                  />
+                  <PremiumSelect 
                     value={levelFilter} 
-                    onChange={(e) => setLevelFilter(e.target.value)}
-                    className="bg-surface-container-low border-none text-sm rounded-xl py-2 px-3 text-slate-600 focus:ring-0 cursor-pointer"
-                  >
-                    <option value="All">All Levels</option>
-                    <option value="Level 5">Level 5</option>
-                    <option value="Level 4">Level 4</option>
-                    <option value="Level 3">Level 3</option>
-                    <option value="Level 2">Level 2</option>
-                    <option value="Ineligible for Placements">Ineligible for Placements</option>
-                  </select>
-                  <select 
+                    onChange={setLevelFilter}
+                    options={[
+                      { value: 'All', label: 'All Levels' },
+                      { value: 'Level 5', label: 'Level 5' },
+                      { value: 'Level 4', label: 'Level 4' },
+                      { value: 'Level 3', label: 'Level 3' },
+                      { value: 'Level 2', label: 'Level 2' },
+                      { value: 'Ineligible for Placements', label: 'Ineligible for Placements' }
+                    ]}
+                  />
+                  <PremiumSelect 
                     value={coreFilter} 
-                    onChange={(e) => setCoreFilter(e.target.value)}
-                    className="bg-surface-container-low border-none text-sm rounded-xl py-2 px-3 text-slate-600 focus:ring-0 cursor-pointer"
-                  >
-                    <option value="All">All Core Status</option>
-                    <option value="Eligible">Core Eligible</option>
-                    <option value="Not Eligible">Core Not Eligible</option>
-                  </select>
+                    onChange={setCoreFilter}
+                    options={[
+                      { value: 'All', label: 'All Core Status' },
+                      { value: 'Eligible', label: 'Core Eligible' },
+                      { value: 'Not Eligible', label: 'Core Not Eligible' }
+                    ]}
+                  />
+                  {selectedStudentIds.length > 0 && (
+                    <button 
+                      onClick={handleExportData}
+                      className="bg-primary text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-primary/90 flex items-center gap-2 transition-all shadow-sm shadow-primary/20"
+                    >
+                      <Download className="w-4 h-4" /> Export {selectedStudentIds.length}
+                    </button>
+                  )}
                   <span className="bg-primary/10 text-primary font-bold px-3 py-2 rounded-xl text-sm">{filteredStudents.length} Students</span>
                 </div>
               </div>
@@ -741,19 +864,35 @@ export default function TeacherDashboard() {
                 <table className="w-full text-left text-sm text-slate-600">
                   <thead className="bg-surface-container-low text-slate-500 text-xs uppercase font-semibold">
                     <tr>
-                      <th className="px-6 py-4 rounded-tl-xl rounded-bl-xl">Student Details</th>
+                      <th className="px-6 py-4 rounded-tl-xl rounded-bl-xl w-12">
+                        <input 
+                          type="checkbox" 
+                          className="rounded border-slate-300 text-primary focus:ring-primary/20"
+                          checked={paginatedStudents.length > 0 && selectedStudentIds.length === paginatedStudents.length}
+                          onChange={handleSelectAll}
+                        />
+                      </th>
+                      <th className="px-6 py-4">Student Details</th>
                       <th className="px-6 py-4">Section</th>
                       <th className="px-6 py-4 text-center">Performance</th>
                       <th className="px-6 py-4 rounded-tr-xl rounded-br-xl text-right">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredStudents.map((student) => (
+                  <tbody className="divide-y divide-slate-100/50">
+                    {paginatedStudents.map((student) => (
                       <React.Fragment key={student.id}>
                         <tr 
-                          onClick={() => setExpandedStudentId(expandedStudentId === student.id ? null : student.id)}
-                          className={`hover:bg-slate-50 transition-colors cursor-pointer group ${expandedStudentId === student.id ? 'bg-slate-50' : ''}`}
+                          onClick={() => setActiveStudent(activeStudent?.id === student.id ? null : student)}
+                          className={`hover:bg-slate-50 transition-colors cursor-pointer group ${activeStudent?.id === student.id ? 'bg-slate-50' : ''}`}
                         >
+                          <td className="px-6 py-4 w-12" onClick={e => e.stopPropagation()}>
+                            <input 
+                              type="checkbox" 
+                              className="rounded border-slate-300 text-primary focus:ring-primary/20"
+                              checked={selectedStudentIds.includes(student.id)}
+                              onChange={() => handleSelectStudent(student.id)}
+                            />
+                          </td>
                           <td className="px-6 py-4 flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold shrink-0">
                               {student.email.charAt(0).toUpperCase()}
@@ -796,30 +935,7 @@ export default function TeacherDashboard() {
                             })()}
                           </td>
                         </tr>
-                        {expandedStudentId === student.id && (
-                          <tr className="bg-slate-50/50">
-                            <td colSpan="4" className="px-6 py-4 border-t border-slate-100">
-                              <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
-                                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Detailed Performance</h4>
-                                {student.results && student.results.length > 0 ? (
-                                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                                    {student.results.map((res, i) => (
-                                      <div key={i} className={`p-3 rounded-xl border ${res.isPass ? 'border-green-100 bg-green-50/30' : 'border-error/20 bg-error/5'}`}>
-                                        <p className="text-xs font-medium text-slate-500 truncate" title={res.subject}>{res.subject}</p>
-                                        <div className="flex justify-between items-end mt-1">
-                                          <span className={`text-lg font-bold ${res.isPass ? 'text-slate-800' : 'text-error'}`}>{res.mark}</span>
-                                          <span className="text-xs text-slate-400 mb-1">/ {res.max}</span>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-slate-500 italic">No detailed marks available for this student.</p>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
+
                       </React.Fragment>
                     ))}
                     {studentsList.length === 0 && (
@@ -828,6 +944,32 @@ export default function TeacherDashboard() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-slate-100 rounded-b-3xl">
+                  <span className="text-sm text-slate-500">
+                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredStudents.length)} of {filteredStudents.length} entries
+                  </span>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-4 py-2 text-sm font-medium text-slate-600 bg-surface-container-low rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    <button 
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-4 py-2 text-sm font-medium text-slate-600 bg-surface-container-low rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
         )}
@@ -973,6 +1115,85 @@ export default function TeacherDashboard() {
             </form>
           </div>
         </div>
+      )}
+
+    </div>
+
+    {/* Student Slide-out Panel */}
+      {activeStudent && (
+        <>
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 transition-opacity" onClick={() => setActiveStudent(null)}></div>
+          <div className="fixed inset-y-0 right-0 w-full max-w-md bg-white border-l border-white/20 shadow-2xl z-50 flex flex-col transform transition-transform duration-300 translate-x-0">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-headline-md font-semibold text-slate-900">{activeStudent.name || 'Student Profile'}</h2>
+                <p className="text-sm text-slate-500">{activeStudent.usn} • {activeStudent.section}</p>
+              </div>
+              <button onClick={() => setActiveStudent(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6 space-y-8">
+              {/* Level & Core Info */}
+              <div className="flex gap-4">
+                <div className="flex-1 bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl p-4 border border-primary/20 flex flex-col items-center justify-center text-center">
+                  <span className="text-xs text-primary font-bold tracking-wider uppercase mb-1">Level</span>
+                  <span className="text-2xl font-bold text-slate-900">{activeStudent.studentLevel || 'N/A'}</span>
+                </div>
+                <div className="flex-1 bg-gradient-to-br from-secondary/10 to-secondary/5 rounded-2xl p-4 border border-secondary/20 flex flex-col items-center justify-center text-center">
+                  <span className="text-xs text-secondary font-bold tracking-wider uppercase mb-1">Core Status</span>
+                  <span className={`text-lg font-bold ${activeStudent.coreEligibility === 'Eligible' ? 'text-emerald-600' : 'text-slate-600'}`}>
+                    {activeStudent.coreEligibility || 'N/A'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Radar Chart for Skills */}
+              <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                <h3 className="font-headline-md font-semibold text-slate-800 mb-4 text-center">Skill Mapping (Lx, Sx, Ax, Px, Cx)</h3>
+                <div className="w-full h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={[
+                      { subject: 'Lx', A: activeStudent.results?.find(r => r.subject === 'Lx')?.mark || 0, fullMark: 4 },
+                      { subject: 'Sx', A: activeStudent.results?.find(r => r.subject === 'Sx')?.mark || 0, fullMark: 4 },
+                      { subject: 'Ax', A: activeStudent.results?.find(r => r.subject === 'Ax')?.mark || 0, fullMark: 4 },
+                      { subject: 'Px', A: activeStudent.results?.find(r => r.subject === 'Px')?.mark || 0, fullMark: 4 },
+                      { subject: 'Cx', A: activeStudent.results?.find(r => r.subject === 'Cx')?.mark || 0, fullMark: 4 }
+                    ]}>
+                      <PolarGrid stroke="#e2e8f0" />
+                      <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }} />
+                      <PolarRadiusAxis angle={30} domain={[0, 4]} tick={false} axisLine={false} />
+                      <Radar name="Student" dataKey="A" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.3} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Subject Results */}
+              <div>
+                <h3 className="font-headline-md font-semibold text-slate-800 mb-4">Detailed Results</h3>
+                <div className="grid grid-cols-1 gap-3">
+                  {activeStudent.results?.filter(r => !['Lx', 'Sx', 'Ax', 'Px', 'Cx'].includes(r.subject)).map((res, i) => (
+                    <div key={i} className={`p-4 rounded-xl border flex justify-between items-center ${res.isPass ? 'bg-green-50/50 border-green-100' : 'bg-red-50/50 border-red-100'}`}>
+                      <div>
+                        <p className="font-medium text-slate-800">{res.subject}</p>
+                        <p className="text-xs text-slate-500">{res.mark} / {res.max} marks</p>
+                      </div>
+                      {res.isAbsent ? (
+                         <span className="bg-slate-200 text-slate-600 text-xs px-2 py-1 rounded-md font-bold">ABSENT</span>
+                      ) : res.isPass ? (
+                         <span className="bg-emerald-500/10 text-emerald-600 text-xs px-2 py-1 rounded-md font-bold">PASS</span>
+                      ) : (
+                         <span className="bg-error/10 text-error text-xs px-2 py-1 rounded-md font-bold">FAIL</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
     </div>
