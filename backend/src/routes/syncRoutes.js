@@ -170,10 +170,13 @@ router.post('/upload', upload.single('file'), async (req, res) => {
           studentLevel = "Level 4";
         } else if (lx >= 4 && sx >= 3 && ax >= 3 && px >= 3.5 && cx >= 3) {
           studentLevel = "Level 3";
-        } else if (lx >= 4 && sx >= 3 && ax >= 3 && px >= 2 && cx >= 4) {
-          studentLevel = "Core";
         } else if (lx >= 4 && sx >= 3 && ax >= 3 && px >= 3 && cx >= 2) {
           studentLevel = "Level 2";
+        }
+
+        let coreEligibility = "Not Eligible";
+        if (lx >= 4 && sx >= 3 && ax >= 3 && px >= 2 && cx >= 4) {
+          coreEligibility = "Eligible";
         }
 
         const name = nameIndex !== -1 && row[nameIndex] ? String(row[nameIndex]) : email.split('@')[0];
@@ -186,6 +189,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
           actualSection: sectionIndex !== -1 && row[sectionIndex] ? String(row[sectionIndex]) : '', // Store actual A/B/C/D section separately just in case
           role: 'student',
           studentLevel: studentLevel,
+          coreEligibility: coreEligibility,
           results: results,
           updatedAt: new Date().toISOString()
         };

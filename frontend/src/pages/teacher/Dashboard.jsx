@@ -57,6 +57,7 @@ export default function TeacherDashboard() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [subjectFilter, setSubjectFilter] = useState('All');
   const [levelFilter, setLevelFilter] = useState('All');
+  const [coreFilter, setCoreFilter] = useState('All');
   const [analyticsSectionFilter, setAnalyticsSectionFilter] = useState('All');
   const [studentSearch, setStudentSearch] = useState('');
   const [expandedStudentId, setExpandedStudentId] = useState(null);
@@ -295,6 +296,7 @@ export default function TeacherDashboard() {
   const filteredStudents = React.useMemo(() => studentsList.filter(student => {
     const matchesSection = sectionFilter === 'All' || student.section === sectionFilter;
     const matchesLevel = levelFilter === 'All' || student.studentLevel === levelFilter;
+    const matchesCore = coreFilter === 'All' || student.coreEligibility === coreFilter;
     const searchLower = studentSearch.toLowerCase();
     const matchesSearch = student.email.toLowerCase().includes(searchLower) || 
                           (student.name && student.name.toLowerCase().includes(searchLower));
@@ -320,8 +322,8 @@ export default function TeacherDashboard() {
       if (statusFilter === 'Failed') matchesStatus = results.length > 0 && !isOverallPass;
     }
 
-    return matchesSection && matchesSearch && matchesStatus && matchesLevel;
-  }), [studentsList, sectionFilter, studentSearch, subjectFilter, statusFilter, levelFilter]);
+    return matchesSection && matchesSearch && matchesStatus && matchesLevel && matchesCore;
+  }), [studentsList, sectionFilter, studentSearch, subjectFilter, statusFilter, levelFilter, coreFilter]);
 
   return (
     <div className="flex h-screen bg-mesh font-body-md overflow-hidden text-slate-800">
@@ -721,8 +723,16 @@ export default function TeacherDashboard() {
                     <option value="Level 4">Level 4</option>
                     <option value="Level 3">Level 3</option>
                     <option value="Level 2">Level 2</option>
-                    <option value="Core">Core</option>
                     <option value="Unranked">Unranked</option>
+                  </select>
+                  <select 
+                    value={coreFilter} 
+                    onChange={(e) => setCoreFilter(e.target.value)}
+                    className="bg-surface-container-low border-none text-sm rounded-xl py-2 px-3 text-slate-600 focus:ring-0 cursor-pointer"
+                  >
+                    <option value="All">All Core Status</option>
+                    <option value="Eligible">Core Eligible</option>
+                    <option value="Not Eligible">Core Not Eligible</option>
                   </select>
                   <span className="bg-primary/10 text-primary font-bold px-3 py-2 rounded-xl text-sm">{filteredStudents.length} Students</span>
                 </div>
