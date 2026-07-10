@@ -832,20 +832,20 @@ export default function TeacherDashboard() {
         {activeTab === 'classes' && (
           <div className="p-4 md:p-8 max-w-7xl mx-auto w-full space-y-8 animate-fade-in-up">
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-6 w-full">
                 <div>
                   <h3 className="font-headline-md text-xl text-slate-900 font-medium">My Students</h3>
                   <p className="text-xs text-slate-500">List of all registered students in your classes</p>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="relative">
+                <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+                  <div className="relative w-full sm:w-auto flex-grow sm:flex-grow-0">
                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input 
                       type="text" 
                       placeholder="Search students..." 
                       value={studentSearch}
                       onChange={(e) => setStudentSearch(e.target.value)}
-                      className="pl-9 pr-4 py-2 bg-surface-container-low border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/20 w-48"
+                      className="pl-9 pr-4 py-2 bg-surface-container-low border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/20 w-full sm:w-48"
                     />
                   </div>
                   <PremiumSelect 
@@ -906,8 +906,8 @@ export default function TeacherDashboard() {
                   <span className="bg-primary/10 text-primary font-bold px-3 py-2 rounded-xl text-sm">{filteredStudents.length} Students</span>
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-600">
+              <div className="overflow-x-auto w-full">
+                <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
                   <thead className="bg-surface-container-low text-slate-500 text-xs uppercase font-semibold">
                     <tr>
                       <th className="px-6 py-4 rounded-tl-xl rounded-bl-xl w-12">
@@ -993,8 +993,8 @@ export default function TeacherDashboard() {
 
               {/* Pagination Controls */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-slate-100 rounded-b-3xl">
-                  <span className="text-sm text-slate-500">
+                <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 bg-white border-t border-slate-100 rounded-b-3xl gap-4">
+                  <span className="text-sm text-slate-500 text-center sm:text-left">
                     Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredStudents.length)} of {filteredStudents.length} entries
                   </span>
                   <div className="flex gap-2">
