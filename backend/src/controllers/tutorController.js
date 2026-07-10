@@ -95,6 +95,8 @@ function compressContext(topChunks, maxLength = 6000) {
   return result || 'No relevant context found in the uploaded notes.';
 }
 
+const memoryStore = new Map();
+
 exports.uploadPDF = async (req, res) => {
   try {
     if (!req.file) {
@@ -110,32 +112,15 @@ exports.uploadPDF = async (req, res) => {
     // Improved sentence-aware chunking
     const chunks = chunkText(text, 2000, 300);
 
-    // Persist to Firestore
-    const batch = db.batch();
-    
-    // Clear old context
-    const oldDocs = await db.collection('rag_contexts').doc(sessionId).collection('chunks').get();
-    oldDocs.forEach(doc => batch.delete(doc.ref));
-
-    // Save new chunks in batches
-    let chunkDocCount = 0;
-    for (let i = 0; i < chunks.length; i += 20) {
-      const slice = chunks.slice(i, i + 20);
-      const ref = db.collection('rag_contexts').doc(sessionId).collection('chunks').doc(`part_${chunkDocCount}`);
-      batch.set(ref, { data: slice });
-      chunkDocCount++;
-    }
-
-    // Save metadata with richer info
-    batch.set(db.collection('rag_contexts').doc(sessionId), {
+    // Persist to in-memory store instead of Firestore to bypass Quota exceeded
+    memoryStore.set(sessionId, {
+      chunks: chunks,
       updatedAt: new Date().toISOString(),
       totalChunks: chunks.length,
       totalPages: data.numpages,
       fileName: req.file.originalname || 'unknown.pdf',
       preview: text.substring(0, 300) + '...'
     });
-
-    await batch.commit();
 
     res.status(200).json({ 
       message: 'PDF processed and indexed successfully', 
@@ -157,15 +142,9 @@ exports.chat = async (req, res) => {
       return res.status(400).json({ error: 'Message is required.' });
     }
 
-    // Retrieve context from Firestore
-    let allChunks = [];
-    const snapshot = await db.collection('rag_contexts').doc(sessionId).collection('chunks').get();
-    
-    snapshot.forEach(doc => {
-      if (doc.data().data) {
-        allChunks = allChunks.concat(doc.data().data);
-      }
-    });
+    // Retrieve context from memory
+    const sessionData = memoryStore.get(sessionId);
+    let allChunks = sessionData ? sessionData.chunks : [];
 
     // Improved RAG retrieval with TF-IDF scoring
     let relevantContext = 'No specific document context provided. The student has not uploaded any notes yet.';

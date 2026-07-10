@@ -19,7 +19,8 @@ import {
   Download,
   X,
   Video,
-  Trophy
+  Trophy,
+  Menu
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -40,6 +41,7 @@ export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('teacherDashboardTab') || 'dashboard';
   });
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   React.useEffect(() => {
     localStorage.setItem('teacherDashboardTab', activeTab);
@@ -122,6 +124,7 @@ export default function TeacherDashboard() {
                   subject: subjName.trim(),
                   mark: markVal,
                   max: maxMark,
+                  pass: passMark,
                   isPass: markVal >= passMark
                 });
               }
@@ -379,6 +382,11 @@ export default function TeacherDashboard() {
     let matchesStatus = true;
     const results = student.results || [];
 
+    const totalMarks = results.reduce((sum, res) => sum + (typeof res.mark === 'number' ? res.mark : 0), 0);
+    const totalMax = results.reduce((sum, res) => sum + res.max, 0);
+    const percent = totalMax > 0 ? (totalMarks / totalMax) * 100 : 0;
+    const isOverallPass = percent >= 50 && !results.some(r => !r.isPass);
+
     if (subjectFilter !== 'All') {
       const subjResult = results.find(r => r.subject === subjectFilter);
       if (!subjResult) {
@@ -388,8 +396,8 @@ export default function TeacherDashboard() {
          if (statusFilter === 'Failed') matchesStatus = !subjResult.isPass;
       }
     } else {
-      if (statusFilter === 'Passed') matchesStatus = results.length > 0 && !results.some(r => !r.isPass);
-      if (statusFilter === 'Failed') matchesStatus = results.some(r => !r.isPass);
+      if (statusFilter === 'Passed') matchesStatus = results.length > 0 && isOverallPass;
+      if (statusFilter === 'Failed') matchesStatus = results.length > 0 && !isOverallPass;
     }
 
     return matchesSection && matchesSearch && matchesStatus;
@@ -441,14 +449,68 @@ export default function TeacherDashboard() {
         </div>
       </aside>
 
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setIsMobileMenuOpen(false)}></div>
+          <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col transition-all duration-300 relative z-50 h-full">
+            <div className="p-6 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-glow-purple">
+                  <span className="material-symbols-outlined text-white text-xl">link</span>
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-white font-headline-md tracking-wide">VidyaSetu</h1>
+                  <p className="text-[10px] uppercase tracking-widest text-primary-fixed">Teacher Portal</p>
+                </div>
+              </div>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <nav className="flex-1 px-4 space-y-2 mt-4 overflow-y-auto">
+              <button onClick={() => {setActiveTab('dashboard'); setIsMobileMenuOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dashboard' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-slate-800 hover:text-white'}`}>
+                <LayoutDashboard className="w-5 h-5" />
+                <span className="font-medium text-sm">Dashboard</span>
+              </button>
+              <button onClick={() => {setActiveTab('classes'); setIsMobileMenuOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'classes' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-slate-800 hover:text-white'}`}>
+                <Users className="w-5 h-5" />
+                <span className="font-medium text-sm">My Classes</span>
+              </button>
+              <button onClick={() => {setActiveTab('resources'); setIsMobileMenuOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'resources' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-slate-800 hover:text-white'}`}>
+                <BookOpen className="w-5 h-5" />
+                <span className="font-medium text-sm">Resources</span>
+              </button>
+              <button onClick={() => {setActiveTab('quizzes'); setIsMobileMenuOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'quizzes' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-slate-800 hover:text-white'}`}>
+                <HelpCircle className="w-5 h-5" />
+                <span className="font-medium text-sm">Quiz Results</span>
+              </button>
+            </nav>
+
+            <div className="p-4 border-t border-slate-800 space-y-2">
+              <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2 text-sm text-error hover:text-error/80 transition-colors rounded-lg hover:bg-error/10">
+                <LogOut className="w-5 h-5" />
+                Log out
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-y-auto scroll-smooth">
         
         {/* Top Header */}
         <header className="h-20 glass-card border-b border-white/20 flex items-center justify-between px-4 md:px-8 sticky top-0 z-10">
-          <div>
-            <h2 className="text-2xl font-headline-md text-slate-900 font-semibold">Welcome back, {currentUser?.email?.split('@')[0] || 'Teacher'}</h2>
-            <p className="text-sm text-slate-500">Here's what's happening with your classes today.</p>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
+              <Menu className="w-6 h-6" />
+            </button>
+            <div>
+              <h2 className="text-xl md:text-2xl font-headline-md text-slate-900 font-semibold truncate max-w-[200px] md:max-w-none">Welcome, {currentUser?.email?.split('@')[0] || 'Teacher'}</h2>
+              <p className="text-xs md:text-sm text-slate-500 hidden sm:block">Here's what's happening with your classes today.</p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="relative hidden md:block">
@@ -777,8 +839,13 @@ export default function TeacherDashboard() {
                             {(() => {
                               const results = student.results || [];
                               if (results.length === 0) return <span className="text-slate-400">N/A</span>;
-                              const hasFailedAny = results.some(res => !res.isPass);
-                              return hasFailedAny ? (
+                              
+                              const totalMarks = results.reduce((sum, res) => sum + (typeof res.mark === 'number' ? res.mark : 0), 0);
+                              const totalMax = results.reduce((sum, res) => sum + res.max, 0);
+                              const percent = totalMax > 0 ? (totalMarks / totalMax) * 100 : 0;
+                              const isFailed = percent < 50 || results.some(r => !r.isPass);
+                              
+                              return isFailed ? (
                                 <span className="bg-error/10 text-error px-2.5 py-1 rounded-md text-xs font-bold">Failed</span>
                               ) : (
                                 <span className="bg-green-100 text-green-700 px-2.5 py-1 rounded-md text-xs font-bold">Passed</span>
