@@ -6,10 +6,12 @@ import {
   signOut,
   createUserWithEmailAndPassword,
 } from 'firebase/auth';
-import { auth } from '../config/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../config/firebase';
 
 interface AuthContextType {
   currentUser: User | null;
+  userRole: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -26,11 +28,28 @@ export function useAuth() {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      if (user) {
+        try {
+          // Fetch role from Firestore users/{uid} — same logic as the web app
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            setUserRole(userDoc.data().role || 'student');
+          } else {
+            setUserRole('student'); // fallback
+          }
+        } catch (err) {
+          console.error('Error fetching user role:', err);
+          setUserRole('student');
+        }
+      } else {
+        setUserRole(null);
+      }
       setLoading(false);
     });
     return unsub;
@@ -45,8 +64,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     createUserWithEmailAndPassword(auth, email, password).then(() => {});
 
   return (
-    <AuthContext.Provider value={{ currentUser, loading, login, logout, signup }}>
-      {!loading && children}
+    <AuthContext.Provider value={{ currentUser, userRole, loading, login, logout, signup }}>
+      {children}
     </AuthContext.Provider>
   );
 }

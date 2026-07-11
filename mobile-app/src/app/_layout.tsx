@@ -4,24 +4,24 @@ import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ActivityIndicator, View } from 'react-native';
 
 function RootLayoutNav() {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading, userRole } = useAuth();
 
   useEffect(() => {
     if (loading) return;
     if (currentUser) {
-      const email = currentUser.email || '';
-      // Route teacher vs student by email convention
-      if (email.includes('teacher') || email.includes('admin') || email.endsWith('@cmrit.ac.in')) {
+      // Route based on role fetched from Firestore (same as the web app)
+      if (userRole === 'teacher' || userRole === 'admin') {
         router.replace('/(teacher)/dashboard');
-      } else {
+      } else if (userRole === 'student') {
         router.replace('/(student)/dashboard');
       }
+      // If userRole is still null, wait — loading state handles it
     } else {
       router.replace('/login');
     }
-  }, [currentUser, loading]);
+  }, [currentUser, loading, userRole]);
 
-  if (loading) {
+  if (loading || (currentUser && !userRole)) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0F172A' }}>
         <ActivityIndicator size="large" color="#6C63FF" />
