@@ -2,6 +2,7 @@
   "expo": {
     "name": "VidyaSetu AI",
     "slug": "vidyasetu-ai",
+    "owner": "deveshreddyp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/logo.jpeg",
@@ -38,6 +39,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1da498bc-1b01-4463-acfd-514d899c1096"
+      }
     }
   }
 }
