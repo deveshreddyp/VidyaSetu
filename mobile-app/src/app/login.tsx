@@ -10,8 +10,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen() {
@@ -22,20 +23,24 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please enter your email and password.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      Toast.show({ type: 'error', text1: 'Missing Fields', text2: 'Please enter your email and password.' });
       return;
     }
     setLoading(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       await login(email.trim(), password);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       let msg = 'Login failed. Please try again.';
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         msg = 'Invalid email or password.';
       } else if (err.code === 'auth/too-many-requests') {
         msg = 'Too many failed attempts. Please try again later.';
       }
-      Alert.alert('Login Failed', msg);
+      Toast.show({ type: 'error', text1: 'Login Failed', text2: msg });
     } finally {
       setLoading(false);
     }
@@ -147,20 +152,22 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   logo: {
-    width: 110,
-    height: 110,
-    borderRadius: 16,
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    marginBottom: 24,
     backgroundColor: '#fff',
   },
   title: {
-    fontSize: 30,
-    fontWeight: '700',
+    fontSize: 28,
+    fontFamily: 'Outfit_700Bold',
     color: '#F1F5F9',
     textAlign: 'center',
     letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
+    fontFamily: 'Outfit_400Regular',
     color: '#94A3B8',
     textAlign: 'center',
     marginTop: 6,
@@ -186,6 +193,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   input: {
+    width: '100%',
     backgroundColor: '#0F172A',
     borderWidth: 1,
     borderColor: '#334155',
@@ -193,9 +201,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 13,
     color: '#F1F5F9',
-    fontSize: 15,
+    fontSize: 16,
+    fontFamily: 'Outfit_400Regular',
   },
   button: {
+    width: '100%',
     marginTop: 24,
     backgroundColor: '#6C63FF',
     paddingVertical: 15,

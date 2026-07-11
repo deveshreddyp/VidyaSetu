@@ -2,6 +2,8 @@ import { Stack, router } from 'expo-router';
 import { useEffect } from 'react';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ActivityIndicator, View } from 'react-native';
+import { useFonts, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
+import Toast from 'react-native-toast-message';
 
 function RootLayoutNav() {
   const { currentUser, loading, userRole } = useAuth();
@@ -39,9 +41,23 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Outfit_400Regular,
+    Outfit_500Medium,
+    Outfit_600SemiBold,
+    Outfit_700Bold,
+  });
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
-    <AuthProvider>
-      <RootLayoutNav />
-    </AuthProvider>
+    <>
+      <AuthProvider>
+        <RootLayoutNav />
+      </AuthProvider>
+      <Toast />
+    </>
   );
 }

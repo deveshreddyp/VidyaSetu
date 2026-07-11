@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../context/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -46,6 +47,7 @@ export default function PathfinderScreen() {
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const userMessage = input.trim();
     setInput('');
     const newMessages: Message[] = [...messages, { role: 'user', content: userMessage }];
@@ -66,9 +68,11 @@ export default function PathfinderScreen() {
       if (!response.ok) throw new Error('API Error');
       const data = await response.json();
       
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setMessages([...newMessages, { role: 'assistant', content: data.reply }]);
     } catch (e) {
       console.error('Chat error:', e);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setMessages([...newMessages, { role: 'assistant', content: "Sorry, I'm having trouble connecting right now." }]);
     } finally {
       setLoading(false);

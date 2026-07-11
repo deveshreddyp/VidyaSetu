@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Modal, ScrollView } from 'react-native';
 import { collection, getDocs, doc, setDoc, query, orderBy } from 'firebase/firestore';
+import * as Haptics from 'expo-haptics';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,7 +48,12 @@ export default function QuizzesScreen() {
   };
 
   const answerQuestion = (isCorrect: boolean) => {
-    if (isCorrect) setScore(s => s + 1);
+    if (isCorrect) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setScore(s => s + 1);
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
     
     if (currentQIndex + 1 < activeQuiz!.questions.length) {
       setCurrentQIndex(i => i + 1);
@@ -70,8 +76,10 @@ export default function QuizzesScreen() {
         percentage,
         timestamp: Date.now()
       });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Quiz Finished!', `You scored ${finalScore}/${activeQuiz!.questions.length} (${percentage}%)`);
     } catch (e) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Failed to save quiz results.');
     }
     setActiveQuiz(null);

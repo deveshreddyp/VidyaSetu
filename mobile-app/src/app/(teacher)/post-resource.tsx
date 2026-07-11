@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import * as Haptics from 'expo-haptics';
+import Toast from 'react-native-toast-message';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,10 +16,12 @@ export default function PostResourceScreen() {
 
   const postResource = async () => {
     if (!title.trim() || !link.trim()) {
-      Alert.alert('Required Fields', 'Please provide at least a Title and a Link.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      Toast.show({ type: 'error', text1: 'Required Fields', text2: 'Please provide a Title and Link.' });
       return;
     }
 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setLoading(true);
     try {
       await addDoc(collection(db, 'materials'), {
@@ -28,13 +32,15 @@ export default function PostResourceScreen() {
         uploadedAt: serverTimestamp(),
       });
       
-      Alert.alert('Success', 'Resource posted successfully!');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Toast.show({ type: 'success', text1: 'Success', text2: 'Resource posted successfully!' });
       setTitle('');
       setDescription('');
       setLink('');
     } catch (e: any) {
       console.error(e);
-      Alert.alert('Error', e.message);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Toast.show({ type: 'error', text1: 'Error', text2: e.message });
     } finally {
       setLoading(false);
     }
@@ -99,10 +105,10 @@ export default function PostResourceScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0F172A' },
   header: { padding: 20, paddingTop: 56, borderBottomWidth: 1, borderColor: '#1E293B' },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#F1F5F9' },
+  title: { fontSize: 22, fontFamily: 'Outfit_700Bold', color: '#F1F5F9' },
   content: { padding: 20 },
   card: { backgroundColor: '#1E293B', padding: 20, borderRadius: 16, borderWidth: 1, borderColor: '#334155' },
-  label: { color: '#CBD5E1', fontSize: 14, fontWeight: '600', marginBottom: 8, marginTop: 16 },
+  label: { color: '#CBD5E1', fontSize: 14, fontFamily: 'Outfit_600SemiBold', marginBottom: 8, marginTop: 16 },
   input: {
     backgroundColor: '#0F172A',
     borderWidth: 1,
@@ -111,6 +117,7 @@ const styles = StyleSheet.create({
     padding: 14,
     color: '#F1F5F9',
     fontSize: 15,
+    fontFamily: 'Outfit_400Regular'
   },
   textArea: {
     minHeight: 100,
@@ -126,5 +133,5 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 32,
   },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
+  btnText: { color: '#fff', fontSize: 16, fontFamily: 'Outfit_700Bold' }
 });
