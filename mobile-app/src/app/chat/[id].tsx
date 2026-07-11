@@ -1,0 +1,146 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, ActivityIndicator, Platform, KeyboardAvoidingView, Text, TouchableOpacity } from 'react-native';
+import { GiftedChat, Bubble, Send, InputToolbar } from 'react-native-gifted-chat';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+import { useAuth } from '../../context/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+
+export default function ChatRoomScreen() {
+  const { id, chatName, type } = useLocalSearchParams();
+  const { currentUser } = useAuth();
+  const router = useRouter();
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id || !currentUser) return;
+    const q = query(
+      collection(db, 'chats', id, 'messages'),
+      orderBy('timestamp', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snap) => {
+      const parsedMessages = snap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          _id: doc.id,
+          text: data.text,
+          createdAt: data.timestamp ? data.timestamp.toDate() : new Date(),
+          user: {
+            _id: data.senderId,
+            name: data.senderName,
+          },
+        };
+      });
+      setMessages(parsedMessages);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [id, currentUser]);
+
+  const onSend = useCallback(async (newMessages = []) => {
+    if (!id || !currentUser || newMessages.length === 0) return;
+    const { text, user } = newMessages[0];
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    try {
+      await addDoc(collection(db, 'chats', id, 'messages'), {
+        text,
+        senderId: user._id,
+        senderName: user.name,
+        timestamp: serverTimestamp()
+      });
+
+      await updateDoc(doc(db, 'chats', id), {
+        lastMessage: text,
+        updatedAt: serverTimestamp()
+      });
+    } catch (e) {
+      console.error(e);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  }, [id, currentUser]);
+
+  const renderBubble = (props) => {
+    return (
+      <Bubble
+        {...props}
+        wrapperStyle={{
+          right: { backgroundColor: '#22D3EE' },
+          left: { backgroundColor: '#1E293B', borderWidth: 1, borderColor: '#334155' }
+        }}
+        textStyle={{
+          right: { color: '#0F172A', fontFamily: 'Outfit_500Medium' },
+          left: { color: '#F1F5F9', fontFamily: 'Outfit_400Regular' }
+        }}
+      />
+    );
+  };
+
+  const renderSend = (props) => {
+    return (
+      <Send {...props}>
+        <View style={{ marginRight: 15, marginBottom: 10 }}>
+          <Ionicons name="send" size={24} color="#22D3EE" />
+        </View>
+      </Send>
+    );
+  };
+
+  const renderInputToolbar = (props) => {
+    return (
+      <InputToolbar
+        {...props}
+        containerStyle={{
+          backgroundColor: '#0F172A',
+          borderTopColor: '#334155',
+          borderTopWidth: 1,
+          paddingTop: 4,
+        }}
+        textInputStyle={{ color: '#fff', fontFamily: 'Outfit_400Regular' }}
+      />
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0F172A', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#22D3EE" />
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ flex: 1, backgroundColor: '#0F172A' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 50, paddingBottom: 15, paddingHorizontal: 20, backgroundColor: '#1E293B', borderBottomWidth: 1, borderBottomColor: '#334155' }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 15 }}>
+          <Ionicons name="arrow-back" size={24} color="#F1F5F9" />
+        </TouchableOpacity>
+        <View>
+          <Text style={{ fontSize: 18, fontFamily: 'Outfit_700Bold', color: '#F1F5F9' }}>{chatName}</Text>
+          {type === 'group' && <Text style={{ fontSize: 12, fontFamily: 'Outfit_400Regular', color: '#94A3B8' }}>Class Group</Text>}
+        </View>
+      </View>
+
+      <GiftedChat
+        messages={messages}
+        onSend={msgs => onSend(msgs)}
+        user={{
+          _id: currentUser?.uid,
+          name: currentUser?.email?.split('@')[0] || 'User'
+        }}
+        renderBubble={renderBubble}
+        renderSend={renderSend}
+        renderInputToolbar={renderInputToolbar}
+        alwaysShowSend
+        bottomOffset={Platform.OS === 'ios' ? 32 : 0}
+      />
+      {Platform.OS === 'android' && <KeyboardAvoidingView behavior="padding" />}
+    </View>
+  );
+}
