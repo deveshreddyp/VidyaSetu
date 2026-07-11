@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -53,7 +53,7 @@ export default function TeacherDashboard() {
 
   const fetchStudents = async () => {
     try {
-      const snap = await getDocs(collection(db, 'students'));
+      const snap = await getDocs(query(collection(db, 'users'), where('role', '==', 'student')));
       const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Student));
       setStudents(data);
     } catch (e) {

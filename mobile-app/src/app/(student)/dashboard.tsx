@@ -50,7 +50,7 @@ export default function StudentDashboard() {
   const fetchStudent = async () => {
     if (!currentUser?.email) { setLoading(false); return; }
     try {
-      const q = query(collection(db, 'students'), where('email', '==', currentUser.email));
+      const q = query(collection(db, 'users'), where('email', '==', currentUser.email));
       const snap = await getDocs(q);
       if (!snap.empty) {
         setStudentData(snap.docs[0].data() as StudentData);

@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 
 interface Student {
@@ -34,7 +34,7 @@ export default function AnalyticsScreen() {
 
   const fetchStudents = async () => {
     try {
-      const snap = await getDocs(collection(db, 'students'));
+      const snap = await getDocs(query(collection(db, 'users'), where('role', '==', 'student')));
       setStudents(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Student)));
     } catch (e) {
       console.error(e);
