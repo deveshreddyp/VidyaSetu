@@ -31,9 +31,30 @@ export default function StudentResultsScreen() {
   const fetchResults = async () => {
     if (!currentUser?.email) { setLoading(false); return; }
     try {
+      // 1. Fetch quiz results
       const q = query(collection(db, 'quizResults'), where('studentEmail', '==', currentUser.email));
       const snap = await getDocs(q);
-      setResults(snap.docs.map((d) => ({ id: d.id, ...d.data() } as QuizResult)));
+      let quizzes = snap.docs.map((d) => ({ id: d.id, ...d.data() } as QuizResult));
+
+      // 2. Fetch Excel subject results from the user's document
+      const qUser = query(collection(db, 'users'), where('email', '==', currentUser.email));
+      const userSnap = await getDocs(qUser);
+      if (!userSnap.empty) {
+        const userData = userSnap.docs[0].data();
+        if (userData.results && Array.isArray(userData.results)) {
+          const excelResults = userData.results.map((r: any, i: number) => ({
+            id: `excel-${i}`,
+            subject: r.subject,
+            mark: r.mark,
+            max: r.max,
+            percentage: r.max ? Math.round((r.mark / r.max) * 100) : 0,
+            topic: r.isAbsent ? 'Absent' : r.isPass ? 'Pass' : 'Fail'
+          }));
+          quizzes = [...excelResults, ...quizzes];
+        }
+      }
+      
+      setResults(quizzes);
     } catch (e) {
       console.error(e);
     } finally {
@@ -97,7 +118,7 @@ export default function StudentResultsScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="trophy-outline" size={48} color="#334155" />
-            <Text style={styles.emptyText}>No quiz results yet</Text>
+            <Text style={styles.emptyText}>No subject marks or quizzes found</Text>
           </View>
         }
       />

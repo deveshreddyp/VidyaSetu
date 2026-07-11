@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   RefreshControl,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -22,6 +24,14 @@ interface Student {
   cgpa?: number;
   section?: string;
   backlogs?: number;
+  results?: Array<{
+    subject: string;
+    mark: number;
+    max: number;
+    pass: number;
+    isPass: boolean;
+    isAbsent: boolean;
+  }>;
 }
 
 const LEVEL_COLORS: Record<string, string> = {
@@ -39,6 +49,7 @@ export default function StudentsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [levelFilter, setLevelFilter] = useState('All');
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   const LEVELS = ['All', 'Level 5', 'Level 4', 'Level 3', 'Level 2', 'Ineligible for Placements'];
 
@@ -80,7 +91,7 @@ export default function StudentsScreen() {
   const renderItem = ({ item }: { item: Student }) => {
     const color = LEVEL_COLORS[item.studentLevel || ''] || '#64748B';
     return (
-      <View style={styles.card}>
+      <TouchableOpacity style={styles.card} onPress={() => setSelectedStudent(item)}>
         <View style={[styles.avatar, { backgroundColor: color + '22' }]}>
           <Text style={[styles.avatarText, { color }]}>
             {(item.name || item.email || '?')[0].toUpperCase()}
@@ -101,7 +112,7 @@ export default function StudentsScreen() {
             <Text style={styles.cgpa}>CGPA: {item.cgpa}</Text>
           )}
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -174,6 +185,50 @@ export default function StudentsScreen() {
           </View>
         }
       />
+
+      {/* Modal for Student Details & Results */}
+      <Modal visible={!!selectedStudent} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSelectedStudent(null)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{selectedStudent?.name || 'Student Details'}</Text>
+            <TouchableOpacity onPress={() => setSelectedStudent(null)} style={styles.modalClose}>
+              <Ionicons name="close" size={24} color="#F1F5F9" />
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={styles.modalContent}>
+            {selectedStudent?.results && selectedStudent.results.length > 0 ? (
+              <View>
+                <Text style={styles.sectionTitle}>Subject Results</Text>
+                {selectedStudent.results.map((r, i) => (
+                  <View key={i} style={styles.resultCard}>
+                    <View style={styles.resultHeader}>
+                      <Text style={styles.resultSubject}>{r.subject}</Text>
+                      <View style={[styles.statusBadge, { backgroundColor: r.isPass ? '#10B98122' : '#EF444422' }]}>
+                        <Text style={[styles.statusText, { color: r.isPass ? '#10B981' : '#EF4444' }]}>
+                          {r.isAbsent ? 'ABSENT' : r.isPass ? 'PASS' : 'FAIL'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.resultMarksRow}>
+                      <Text style={styles.resultMarksLabel}>Marks:</Text>
+                      <Text style={styles.resultMarksValue}>{r.mark} / {r.max}</Text>
+                    </View>
+                    <View style={styles.resultMarksRow}>
+                      <Text style={styles.resultMarksLabel}>Pass Req:</Text>
+                      <Text style={styles.resultMarksValue}>{r.pass}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyResults}>
+                <Ionicons name="document-text-outline" size={48} color="#334155" />
+                <Text style={styles.emptyText}>No subject results found for this student.</Text>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -242,5 +297,20 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 11, fontWeight: '700' },
   cgpa: { color: '#64748B', fontSize: 11 },
   empty: { alignItems: 'center', marginTop: 80, gap: 12 },
-  emptyText: { color: '#334155', fontSize: 14 },
+  emptyText: { color: '#334155', fontSize: 14, textAlign: 'center' },
+  modalContainer: { flex: 1, backgroundColor: '#0F172A' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#1E293B' },
+  modalTitle: { fontSize: 20, fontWeight: '700', color: '#F1F5F9' },
+  modalClose: { padding: 4 },
+  modalContent: { padding: 20 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#CBD5E1', marginBottom: 16 },
+  resultCard: { backgroundColor: '#1E293B', borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#334155' },
+  resultHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  resultSubject: { fontSize: 15, fontWeight: '600', color: '#F1F5F9', flex: 1, marginRight: 12 },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  statusText: { fontSize: 11, fontWeight: '700' },
+  resultMarksRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
+  resultMarksLabel: { fontSize: 13, color: '#64748B' },
+  resultMarksValue: { fontSize: 14, fontWeight: '600', color: '#E2E8F0' },
+  emptyResults: { alignItems: 'center', marginTop: 40, gap: 12 },
 });

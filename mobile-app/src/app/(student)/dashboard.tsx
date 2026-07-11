@@ -21,6 +21,14 @@ interface StudentData {
   cgpa?: number;
   backlogs?: number;
   email?: string;
+  results?: Array<{
+    subject: string;
+    mark: number;
+    max: number;
+    pass: number;
+    isPass: boolean;
+    isAbsent: boolean;
+  }>;
 }
 
 const LEVEL_COLORS: Record<string, string> = {
@@ -134,7 +142,22 @@ export default function StudentDashboard() {
         </Text>
       </View>
 
-      <View style={{ height: 32 }} />
+      {/* Excel Results Snapshot */}
+      {studentData?.results && studentData.results.length > 0 && (
+        <View style={{ marginTop: 28 }}>
+          <Text style={styles.sectionTitle}>Latest Subject Marks</Text>
+          {studentData.results.slice(0, 5).map((r, i) => (
+            <View key={i} style={styles.card}>
+              <View style={styles.infoRow}>
+                <Ionicons name="document-text-outline" size={18} color="#6C63FF" style={{ width: 24 }} />
+                <Text style={styles.infoLabel}>{r.subject}</Text>
+                <Text style={styles.infoValue}>{r.mark} / {r.max}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
     </ScrollView>
   );
 }
