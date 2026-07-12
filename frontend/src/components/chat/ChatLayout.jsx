@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import { db } from '../../../config/firebase';
-import { useAuth } from '../../../context/AuthContext';
+import { db } from '../../services/firebase';
+import { useAuth } from '../../context/AuthContext';
 import ChatList from './ChatList';
 import ChatWindow from './ChatWindow';
 import NewChatModal from './NewChatModal';

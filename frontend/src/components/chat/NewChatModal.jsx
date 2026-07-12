@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../../config/firebase';
+import { db } from '../../services/firebase';
 import { FaTimes, FaSearch, FaUserGraduate, FaChalkboardTeacher, FaUsers } from 'react-icons/fa';
 
 export default function NewChatModal({ onClose, onChatCreated, currentUser }) {

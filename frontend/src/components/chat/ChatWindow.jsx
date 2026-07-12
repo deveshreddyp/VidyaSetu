@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
-import { db } from '../../../config/firebase';
+import { db } from '../../services/firebase';
 import { FaPaperPlane } from 'react-icons/fa';
 
 export default function ChatWindow({ chat, currentUser }) {
