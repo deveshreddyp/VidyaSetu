@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, ActivityIndicator, Platform, KeyboardAvoidingView, Text, TouchableOpacity } from 'react-native';
 import { GiftedChat, Bubble, Send, InputToolbar } from 'react-native-gifted-chat';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -60,6 +60,41 @@ export default function ChatRoomScreen() {
         lastMessage: text,
         updatedAt: serverTimestamp()
       });
+
+      // Fetch chat to get participants
+      const chatDoc = await getDoc(doc(db, 'chats', id));
+      if (chatDoc.exists()) {
+        const chatData = chatDoc.data();
+        const otherParticipantIds = chatData.participants.filter(p => p !== currentUser.uid);
+        
+        // Fetch push tokens for other participants
+        const tokens = [];
+        for (const pId of otherParticipantIds) {
+          const userDoc = await getDoc(doc(db, 'users', pId));
+          if (userDoc.exists() && userDoc.data().pushToken) {
+            tokens.push(userDoc.data().pushToken);
+          }
+        }
+        
+        if (tokens.length > 0) {
+          // Send push notification directly via Expo Push API
+          await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: {
+              Accept: 'application/json',
+              'Accept-encoding': 'gzip, deflate',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(tokens.map(token => ({
+              to: token,
+              sound: 'default',
+              title: `New message from ${user.name}`,
+              body: text,
+              data: { chatId: id },
+            }))),
+          });
+        }
+      }
     } catch (e) {
       console.error(e);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

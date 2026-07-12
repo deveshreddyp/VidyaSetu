@@ -4,9 +4,19 @@ import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ActivityIndicator, View } from 'react-native';
 import { useFonts, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
 import Toast from 'react-native-toast-message';
+import { usePushNotifications } from '../hooks/usePushNotifications';
+import { db } from '../config/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 function RootLayoutNav() {
   const { currentUser, loading, userRole } = useAuth();
+  const { expoPushToken } = usePushNotifications();
+
+  useEffect(() => {
+    if (currentUser && expoPushToken) {
+      setDoc(doc(db, 'users', currentUser.uid), { pushToken: expoPushToken }, { merge: true });
+    }
+  }, [currentUser, expoPushToken]);
 
   useEffect(() => {
     if (loading) return;
