@@ -34,6 +34,8 @@ import {
   Tooltip, 
   ResponsiveContainer
 } from 'recharts';
+import ChatLayout from '../../components/chat/ChatLayout';
+import { FaComments } from 'react-icons/fa';
 
 
 export default function StudentDashboard() {
@@ -291,6 +293,10 @@ export default function StudentDashboard() {
             <BookOpen className="w-5 h-5" />
             <span className="text-sm">My Library</span>
           </button>
+          <button onClick={() => setActiveTab('messages')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'messages' ? 'bg-secondary/10 border-l-4 border-secondary text-secondary-container font-bold' : 'hover:bg-slate-800 hover:text-white border-l-4 border-transparent'}`}>
+            <FaComments className="w-5 h-5" />
+            <span className="text-sm">Messages</span>
+          </button>
           
           <div className="pt-6 pb-2 px-4">
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Career Hub</p>
@@ -355,6 +361,10 @@ export default function StudentDashboard() {
                 <BookOpen className="w-5 h-5" />
                 <span className="font-medium text-sm">Study Materials</span>
               </button>
+              <button onClick={() => {setActiveTab('messages'); setIsMobileMenuOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'messages' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-slate-800 hover:text-white'}`}>
+                <FaComments className="w-5 h-5" />
+                <span className="font-medium text-sm">Messages</span>
+              </button>
               <div className="pt-4 pb-2 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Career Tools</div>
               <button onClick={() => {navigate('/student-dashboard/resume'); setIsMobileMenuOpen(false);}} className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all hover:bg-slate-800 hover:text-white group">
                 <div className="flex items-center gap-3">
@@ -412,6 +422,12 @@ export default function StudentDashboard() {
         </header>
 
         {/* Dashboard Content */}
+        {activeTab === 'messages' && (
+          <div className="p-4 md:p-8 max-w-7xl mx-auto w-full h-full animate-fade-in-up">
+             <ChatLayout />
+          </div>
+        )}
+
         {activeTab === 'dashboard' && (
         <div className="p-4 md:p-8 max-w-7xl mx-auto w-full space-y-8">
           

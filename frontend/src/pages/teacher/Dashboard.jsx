@@ -25,6 +25,8 @@ import {
   PlayCircle,
   Trophy
 } from 'lucide-react';
+import ChatLayout from '../../components/chat/ChatLayout';
+import { FaComments } from 'react-icons/fa';
 
 const PremiumSelect = ({ value, onChange, options, icon: Icon, className = '' }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -472,6 +474,10 @@ export default function TeacherDashboard() {
             <HelpCircle className="w-5 h-5" />
             <span className="font-medium text-sm">Quiz Results</span>
           </button>
+          <button onClick={() => setActiveTab('messages')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'messages' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-slate-800 hover:text-white'}`}>
+            <FaComments className="w-5 h-5" />
+            <span className="font-medium text-sm">Messages</span>
+          </button>
         </nav>
 
         <div className="p-4 border-t border-slate-800 space-y-2">
@@ -521,6 +527,10 @@ export default function TeacherDashboard() {
                 <HelpCircle className="w-5 h-5" />
                 <span className="font-medium text-sm">Quiz Results</span>
               </button>
+              <button onClick={() => {setActiveTab('messages'); setIsMobileMenuOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'messages' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-slate-800 hover:text-white'}`}>
+                <FaComments className="w-5 h-5" />
+                <span className="font-medium text-sm">Messages</span>
+              </button>
             </nav>
 
             <div className="p-4 border-t border-slate-800 space-y-2">
@@ -563,6 +573,12 @@ export default function TeacherDashboard() {
         </header>
 
         {/* Dashboard Content */}
+        {activeTab === 'messages' && (
+          <div className="p-4 md:p-8 max-w-7xl mx-auto w-full h-full animate-fade-in-up">
+             <ChatLayout />
+          </div>
+        )}
+
         {activeTab === 'dashboard' && (
         <div className="p-4 md:p-8 max-w-7xl mx-auto w-full space-y-8">
           

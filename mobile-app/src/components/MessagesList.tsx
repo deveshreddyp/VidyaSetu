@@ -16,12 +16,16 @@ export default function MessagesList() {
     if (!currentUser) return;
     const q = query(
       collection(db, 'chats'),
-      where('participants', 'array-contains', currentUser.uid),
-      orderBy('updatedAt', 'desc')
+      where('participants', 'array-contains', currentUser.uid)
     );
     
     const unsubscribe = onSnapshot(q, (snap) => {
-      setChats(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const fetchedChats = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      fetchedChats.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
+      setChats(fetchedChats);
+      setLoading(false);
+    }, (error) => {
+      console.error("Messages Error:", error);
       setLoading(false);
     });
 
