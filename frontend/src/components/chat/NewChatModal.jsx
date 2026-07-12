@@ -160,6 +160,7 @@ export default function NewChatModal({ onClose, onChatCreated, currentUser }) {
                   placeholder="e.g. CS 101 Announcements"
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500"
                 />
+              </div>
               <div className="mb-4">
                 <label className="block text-sm text-slate-400 mb-1">Target Section</label>
                 <select
