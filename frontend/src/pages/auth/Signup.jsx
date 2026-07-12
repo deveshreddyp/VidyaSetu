@@ -74,24 +74,7 @@ export default function Signup() {
             )}
 
             <form className="space-y-5" onSubmit={handleSubmit}>
-              {/* Role Selection */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">I am a...</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { key: 'student', icon: GraduationCap, label: 'Student' },
-                    { key: 'teacher', icon: BookOpen, label: 'Teacher' },
-                  ].map(({ key, icon: Icon, label }) => (
-                    <button key={key} type="button" onClick={() => setRole(key)}
-                      className={`flex flex-col items-center p-4 rounded-2xl border-2 transition-all hover:-translate-y-0.5 ${
-                        role === key ? 'border-primary bg-primary/5 text-primary shadow-md shadow-primary/10' : 'border-slate-200 hover:border-slate-300 text-slate-500'
-                      }`}>
-                      <Icon className="w-6 h-6 mb-2" />
-                      <span className="text-sm font-semibold">{label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* Role Selection Removed */}
 
               {[
                 { label: 'Email', type: 'email', icon: Mail, value: email, set: setEmail, ph: 'you@example.com' },

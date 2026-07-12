@@ -481,10 +481,12 @@ export default function TeacherDashboard() {
         </nav>
 
         <div className="p-4 border-t border-slate-800 space-y-2">
-          <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800">
-            <Settings className="w-5 h-5" />
-            Settings
-          </button>
+          {currentUser?.email === 'deveshreddypusalapati@gmail.com' && (
+            <button onClick={() => navigate('/settings')} className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800">
+              <Settings className="w-5 h-5" />
+              Settings
+            </button>
+          )}
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2 text-sm text-error hover:text-error/80 transition-colors rounded-lg hover:bg-error/10">
             <LogOut className="w-5 h-5" />
             Log out
@@ -534,6 +536,12 @@ export default function TeacherDashboard() {
             </nav>
 
             <div className="p-4 border-t border-slate-800 space-y-2">
+              {currentUser?.email === 'deveshreddypusalapati@gmail.com' && (
+                <button onClick={() => { navigate('/settings'); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800">
+                  <Settings className="w-5 h-5" />
+                  Settings
+                </button>
+              )}
               <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2 text-sm text-error hover:text-error/80 transition-colors rounded-lg hover:bg-error/10">
                 <LogOut className="w-5 h-5" />
                 Log out

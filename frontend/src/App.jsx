@@ -14,6 +14,7 @@ import QuizGenerator from './pages/teacher/QuizGenerator';
 import QuizAttempt from './pages/student/QuizAttempt';
 import ResumeBuilder from './pages/student/ResumeBuilder';
 import AdminDashboard from './pages/admin/Dashboard';
+import Settings from './pages/admin/Settings';
 
 // A component to handle root redirect based on role
 function RootRedirect() {
@@ -108,6 +109,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/settings" 
+            element={
+              <ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}>
+                <Settings />
               </ProtectedRoute>
             } 
           />
