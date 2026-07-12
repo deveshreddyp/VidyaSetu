@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,19 +8,31 @@ import {
   RefreshControl,
   TouchableOpacity,
   Image,
+  TextInput,
+  Modal,
+  Platform,
 } from 'react-native';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 
+interface StudentResult {
+  subject: string;
+  mark: number;
+  max: number;
+  isPass: boolean;
+}
+
 interface Student {
   id: string;
   name?: string;
-  email?: string;
+  email: string;
   studentLevel?: string;
+  coreEligibility?: string;
   cgpa?: number;
   section?: string;
+  results?: StudentResult[];
 }
 
 const LEVEL_COLORS: Record<string, string> = {
@@ -31,25 +43,21 @@ const LEVEL_COLORS: Record<string, string> = {
   'Ineligible for Placements': '#EF4444',
 };
 
-function StatCard({ title, value, icon, color }: { title: string; value: string | number; icon: string; color: string }) {
-  return (
-    <View style={[styles.statCard, { borderLeftColor: color }]}>
-      <View style={[styles.statIcon, { backgroundColor: color + '22' }]}>
-        <Ionicons name={icon as any} size={22} color={color} />
-      </View>
-      <View>
-        <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel}>{title}</Text>
-      </View>
-    </View>
-  );
-}
-
 export default function TeacherDashboard() {
   const { currentUser } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Filters
+  const [search, setSearch] = useState('');
+  const [subjectFilter, setSubjectFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [levelFilter, setLevelFilter] = useState('All');
+  const [coreFilter, setCoreFilter] = useState('All');
+  const [sectionFilter, setSectionFilter] = useState('All');
+  
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   const fetchStudents = async () => {
     try {
@@ -64,22 +72,92 @@ export default function TeacherDashboard() {
     }
   };
 
-  useEffect(() => { fetchStudents(); }, []);
+  useEffect(() => {
+    fetchStudents();
+    // Optional: Real-time listener
+    const unsubscribe = onSnapshot(
+      query(collection(db, 'users'), where('role', '==', 'student')),
+      (snapshot) => {
+        const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Student));
+        setStudents(data);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
 
-  const onRefresh = () => { setRefreshing(true); fetchStudents(); };
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchStudents();
+  };
 
-  const totalStudents = students.length;
-  const level5Count = students.filter((s) => s.studentLevel === 'Level 5').length;
-  const level4Count = students.filter((s) => s.studentLevel === 'Level 4').length;
-  const ineligible = students.filter((s) => s.studentLevel === 'Ineligible for Placements').length;
+  const availableSubjects = useMemo(() => {
+    const subjects = new Set<string>();
+    students.forEach(s => {
+      if (s.results) s.results.forEach(r => subjects.add(r.subject));
+    });
+    return Array.from(subjects).sort();
+  }, [students]);
 
-  const levelGroups: Record<string, number> = {};
-  students.forEach((s) => {
-    const lv = s.studentLevel || 'Unknown';
-    levelGroups[lv] = (levelGroups[lv] || 0) + 1;
-  });
+  const availableSections = useMemo(() => {
+    const sections = new Set<string>();
+    students.forEach(s => {
+      if (s.section) sections.add(s.section);
+    });
+    return Array.from(sections).sort();
+  }, [students]);
+
+  const filteredStudents = useMemo(() => {
+    return students.filter(student => {
+      const searchLower = search.toLowerCase();
+      const matchesSearch = student.email.toLowerCase().includes(searchLower) || 
+                            (student.name && student.name.toLowerCase().includes(searchLower));
+      const matchesSection = sectionFilter === 'All' || student.section === sectionFilter;
+      const matchesLevel = levelFilter === 'All' || student.studentLevel === levelFilter;
+      const matchesCore = coreFilter === 'All' || student.coreEligibility === coreFilter;
+
+      let matchesStatus = true;
+      const results = student.results || [];
+
+      if (subjectFilter !== 'All') {
+        const subjResult = results.find(r => r.subject === subjectFilter);
+        if (!subjResult) {
+           matchesStatus = false;
+        } else {
+           if (statusFilter === 'Passed') matchesStatus = subjResult.isPass;
+           if (statusFilter === 'Failed') matchesStatus = !subjResult.isPass;
+        }
+      } else {
+        const totalMarks = results.reduce((sum, res) => sum + (typeof res.mark === 'number' ? res.mark : 0), 0);
+        const totalMax = results.reduce((sum, res) => sum + res.max, 0);
+        const percent = totalMax > 0 ? (totalMarks / totalMax) * 100 : 0;
+        const isOverallPass = percent >= 50 && !results.some(r => !r.isPass);
+        
+        if (statusFilter === 'Passed') matchesStatus = results.length > 0 && isOverallPass;
+        if (statusFilter === 'Failed') matchesStatus = results.length > 0 && !isOverallPass;
+      }
+
+      return matchesSearch && matchesSection && matchesLevel && matchesCore && matchesStatus;
+    });
+  }, [students, search, sectionFilter, subjectFilter, statusFilter, levelFilter, coreFilter]);
 
   const teacherName = currentUser?.email?.split('@')[0] || 'Teacher';
+
+  const FilterPill = ({ label, value, options, onSelect }: { label: string, value: string, options: string[], onSelect: (val: string) => void }) => (
+    <View style={styles.filterSection}>
+      <Text style={styles.filterSectionTitle}>{label}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 20 }}>
+        {['All', ...options].map(opt => (
+          <TouchableOpacity 
+            key={opt}
+            onPress={() => onSelect(opt)}
+            style={[styles.filterPill, value === opt && styles.filterPillActive]}
+          >
+            <Text style={[styles.filterPillText, value === opt && styles.filterPillTextActive]}>{opt}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
 
   if (loading) {
     return (
@@ -91,168 +169,421 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6C63FF" />}
-    >
-      {/* Header */}
+    <View style={styles.container}>
+      {/* Fixed Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Hello, {teacherName} 👋</Text>
-          <Text style={styles.subGreeting}>Here's your class overview</Text>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.greeting}>Hello, {teacherName}</Text>
+            <Text style={styles.subGreeting}>Manage your classroom</Text>
+          </View>
+          <Image source={require('../../../assets/logo.jpeg')} style={styles.headerLogo} resizeMode="contain" />
         </View>
-        <Image source={require('../../../assets/logo.jpeg')} style={styles.headerLogo} resizeMode="contain" />
+
+        <View style={styles.searchRow}>
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#94A3B8" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search students..."
+              placeholderTextColor="#94A3B8"
+              value={search}
+              onChangeText={setSearch}
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => setSearch('')}>
+                <Ionicons name="close-circle" size={20} color="#94A3B8" />
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          <TouchableOpacity 
+            style={[styles.filterButton, (subjectFilter !== 'All' || statusFilter !== 'All' || levelFilter !== 'All' || coreFilter !== 'All' || sectionFilter !== 'All') && styles.filterButtonActive]}
+            onPress={() => setIsFilterModalOpen(true)}
+          >
+            <Ionicons name="options" size={24} color={(subjectFilter !== 'All' || statusFilter !== 'All' || levelFilter !== 'All' || coreFilter !== 'All' || sectionFilter !== 'All') ? '#fff' : '#64748B'} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Stat Cards */}
-      <Text style={styles.sectionTitle}>Overview</Text>
-      <View style={styles.statsGrid}>
-        <StatCard title="Total Students" value={totalStudents} icon="people" color="#6C63FF" />
-        <StatCard title="Level 5" value={level5Count} icon="trophy" color="#10B981" />
-        <StatCard title="Level 4" value={level4Count} icon="star" color="#3B82F6" />
-        <StatCard title="Ineligible" value={ineligible} icon="warning" color="#EF4444" />
-      </View>
+      {/* Main Content */}
+      <ScrollView
+        style={styles.listContainer}
+        contentContainerStyle={styles.listContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6C63FF" />}
+      >
+        <View style={styles.listHeader}>
+          <Text style={styles.listTitle}>Students List</Text>
+          <Text style={styles.listCount}>{filteredStudents.length} Results</Text>
+        </View>
 
-      {/* Level Breakdown */}
-      <Text style={styles.sectionTitle}>Placement Level Breakdown</Text>
-      <View style={styles.card}>
-        {Object.entries(levelGroups)
-          .sort((a, b) => b[1] - a[1])
-          .map(([level, count]) => {
-            const pct = totalStudents > 0 ? (count / totalStudents) * 100 : 0;
-            const color = LEVEL_COLORS[level] || '#64748B';
-            return (
-              <View key={level} style={styles.levelRow}>
-                <View style={styles.levelLabel}>
-                  <View style={[styles.levelDot, { backgroundColor: color }]} />
-                  <Text style={styles.levelName}>{level}</Text>
-                </View>
-                <View style={styles.levelBarContainer}>
-                  <View style={[styles.levelBar, { width: `${pct}%`, backgroundColor: color }]} />
-                </View>
-                <Text style={[styles.levelCount, { color }]}>{count}</Text>
-              </View>
-            );
-          })}
-      </View>
-
-      {/* Recent Students */}
-      <Text style={styles.sectionTitle}>Recent Students</Text>
-      <View style={styles.card}>
-        {students.slice(0, 6).map((s) => {
+        {filteredStudents.map((s) => {
           const color = LEVEL_COLORS[s.studentLevel || ''] || '#64748B';
+          
+          let displayScore = 'N/A';
+          let isPassed = false;
+          let hasData = false;
+
+          const results = s.results || [];
+          if (subjectFilter !== 'All') {
+            const subjResult = results.find(r => r.subject === subjectFilter);
+            if (subjResult) {
+              hasData = true;
+              displayScore = `${Math.round((subjResult.mark / subjResult.max) * 100)}%`;
+              isPassed = subjResult.isPass;
+            }
+          } else {
+            if (results.length > 0) {
+              hasData = true;
+              const totalMarks = results.reduce((sum, res) => sum + (typeof res.mark === 'number' ? res.mark : 0), 0);
+              const totalMax = results.reduce((sum, res) => sum + res.max, 0);
+              displayScore = totalMax > 0 ? `${((totalMarks / totalMax) * 100).toFixed(1)}%` : '0%';
+              isPassed = !results.some(r => !r.isPass);
+            }
+          }
+
           return (
-            <View key={s.id} style={styles.studentRow}>
-              <View style={[styles.avatar, { backgroundColor: color + '33' }]}>
-                <Text style={[styles.avatarText, { color }]}>
-                  {(s.name || s.email || '?')[0].toUpperCase()}
-                </Text>
+            <View key={s.id} style={styles.studentCard}>
+              <View style={styles.studentCardHeader}>
+                <View style={styles.studentMeta}>
+                  <View style={[styles.avatar, { backgroundColor: color + '33' }]}>
+                    <Text style={[styles.avatarText, { color }]}>
+                      {(s.name || s.email || '?')[0].toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.studentInfo}>
+                    <Text style={styles.studentName} numberOfLines={1}>{s.name || s.email.split('@')[0]}</Text>
+                    <Text style={styles.studentEmail} numberOfLines={1}>{s.email}</Text>
+                  </View>
+                </View>
+                {hasData ? (
+                  <View style={[styles.statusBadge, { backgroundColor: isPassed ? '#10B98122' : '#EF444422' }]}>
+                    <Text style={[styles.statusBadgeText, { color: isPassed ? '#10B981' : '#EF4444' }]}>
+                      {isPassed ? 'Passed' : 'Failed'}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={[styles.statusBadge, { backgroundColor: '#334155' }]}>
+                    <Text style={[styles.statusBadgeText, { color: '#94A3B8' }]}>No Data</Text>
+                  </View>
+                )}
               </View>
-              <View style={styles.studentInfo}>
-                <Text style={styles.studentName} numberOfLines={1}>{s.name || s.email || 'Unknown'}</Text>
-                <Text style={styles.studentSection}>{s.section || '—'}</Text>
-              </View>
-              <View style={[styles.levelBadge, { backgroundColor: color + '22' }]}>
-                <Text style={[styles.levelBadgeText, { color }]}>{(s.studentLevel || 'N/A').replace('Level ', 'L')}</Text>
+
+              <View style={styles.studentCardBody}>
+                <View style={styles.dataCol}>
+                  <Text style={styles.dataLabel}>{subjectFilter === 'All' ? 'Avg. Score' : 'Score'}</Text>
+                  <Text style={styles.dataValue}>{displayScore}</Text>
+                </View>
+                <View style={styles.dataCol}>
+                  <Text style={styles.dataLabel}>Section</Text>
+                  <Text style={styles.dataValue}>{s.section || 'N/A'}</Text>
+                </View>
+                <View style={styles.dataCol}>
+                  <Text style={styles.dataLabel}>Level</Text>
+                  <View style={[styles.levelMiniBadge, { backgroundColor: color + '22' }]}>
+                    <Text style={[styles.levelMiniBadgeText, { color }]}>{(s.studentLevel || 'N/A').replace('Level ', 'L')}</Text>
+                  </View>
+                </View>
               </View>
             </View>
           );
         })}
-      </View>
 
-      <View style={{ height: 24 }} />
-    </ScrollView>
+        {filteredStudents.length === 0 && (
+          <View style={styles.emptyState}>
+            <Ionicons name="search-outline" size={48} color="#334155" />
+            <Text style={styles.emptyText}>No students match the current filters.</Text>
+          </View>
+        )}
+        
+        <View style={{ height: 40 }} />
+      </ScrollView>
+
+      {/* Filter Bottom Sheet Modal */}
+      <Modal visible={isFilterModalOpen} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filter Students</Text>
+              <TouchableOpacity onPress={() => setIsFilterModalOpen(false)} style={styles.closeBtn}>
+                <Ionicons name="close" size={24} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalScroll}>
+              <FilterPill 
+                label="Section" 
+                value={sectionFilter} 
+                options={availableSections} 
+                onSelect={setSectionFilter} 
+              />
+              <FilterPill 
+                label="Subject" 
+                value={subjectFilter} 
+                options={availableSubjects} 
+                onSelect={setSubjectFilter} 
+              />
+              <FilterPill 
+                label="Performance Status" 
+                value={statusFilter} 
+                options={['Passed', 'Failed']} 
+                onSelect={setStatusFilter} 
+              />
+              <FilterPill 
+                label="Placement Level" 
+                value={levelFilter} 
+                options={['Level 5', 'Level 4', 'Level 3', 'Level 2', 'Ineligible for Placements']} 
+                onSelect={setLevelFilter} 
+              />
+              <FilterPill 
+                label="Core Eligibility" 
+                value={coreFilter} 
+                options={['Eligible', 'Not Eligible']} 
+                onSelect={setCoreFilter} 
+              />
+              <View style={{ height: 20 }} />
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={styles.resetBtn}
+                onPress={() => {
+                  setSectionFilter('All');
+                  setSubjectFilter('All');
+                  setStatusFilter('All');
+                  setLevelFilter('All');
+                  setCoreFilter('All');
+                }}
+              >
+                <Text style={styles.resetBtnText}>Reset All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.applyBtn} onPress={() => setIsFilterModalOpen(false)}>
+                <Text style={styles.applyBtnText}>View {filteredStudents.length} Results</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0F172A' },
-  content: { padding: 20, paddingTop: 56 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0F172A', gap: 12 },
-  loadingText: { color: '#94A3B8', fontSize: 14 },
+  loadingText: { color: '#94A3B8', fontSize: 14, fontFamily: 'Outfit_400Regular' },
+  
   header: {
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    backgroundColor: '#1E293B',
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+  },
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 20,
   },
-  greeting: { fontSize: 22, fontWeight: '700', color: '#F1F5F9' },
-  subGreeting: { fontSize: 13, color: '#94A3B8', marginTop: 2 },
-  headerLogo: { width: 48, height: 48, borderRadius: 10, backgroundColor: '#fff' },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#CBD5E1',
-    marginBottom: 12,
-    letterSpacing: 0.3,
-  },
-  statsGrid: {
+  greeting: { fontSize: 24, fontFamily: 'Outfit_700Bold', color: '#F1F5F9' },
+  subGreeting: { fontSize: 14, color: '#94A3B8', fontFamily: 'Outfit_400Regular', marginTop: 2 },
+  headerLogo: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#fff' },
+  
+  searchRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 12,
-    marginBottom: 28,
   },
-  statCard: {
+  searchContainer: {
     flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#1E293B',
-    borderRadius: 14,
-    padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    borderLeftWidth: 3,
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 48,
     borderWidth: 1,
     borderColor: '#334155',
   },
-  statIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    color: '#F1F5F9',
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 15,
+  },
+  filterButton: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
   },
-  statValue: { fontSize: 22, fontWeight: '700', color: '#F1F5F9' },
-  statLabel: { fontSize: 11, color: '#64748B', marginTop: 2 },
-  card: {
+  filterButtonActive: {
+    backgroundColor: '#6C63FF',
+    borderColor: '#6C63FF',
+  },
+
+  listContainer: { flex: 1 },
+  listContent: { padding: 20 },
+  listHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  listTitle: { color: '#F1F5F9', fontSize: 18, fontFamily: 'Outfit_600SemiBold' },
+  listCount: { color: '#94A3B8', fontSize: 14, fontFamily: 'Outfit_400Regular' },
+
+  studentCard: {
     backgroundColor: '#1E293B',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 28,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#334155',
-    gap: 14,
   },
-  levelRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  levelLabel: { flexDirection: 'row', alignItems: 'center', gap: 6, width: 140 },
-  levelDot: { width: 8, height: 8, borderRadius: 4 },
-  levelName: { color: '#94A3B8', fontSize: 12, flex: 1 },
-  levelBarContainer: {
+  studentCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  studentMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     flex: 1,
-    height: 6,
-    backgroundColor: '#0F172A',
-    borderRadius: 3,
-    overflow: 'hidden',
+    paddingRight: 10,
   },
-  levelBar: { height: '100%', borderRadius: 3 },
-  levelCount: { fontSize: 13, fontWeight: '700', width: 32, textAlign: 'right' },
-  studentRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarText: { fontSize: 16, fontWeight: '700' },
+  avatarText: { fontSize: 18, fontFamily: 'Outfit_700Bold' },
   studentInfo: { flex: 1 },
-  studentName: { color: '#E2E8F0', fontSize: 14, fontWeight: '600' },
-  studentSection: { color: '#64748B', fontSize: 12, marginTop: 2 },
-  levelBadge: {
+  studentName: { color: '#F1F5F9', fontSize: 16, fontFamily: 'Outfit_600SemiBold', marginBottom: 2 },
+  studentEmail: { color: '#94A3B8', fontSize: 12, fontFamily: 'Outfit_400Regular' },
+  
+  statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 20,
+    borderRadius: 8,
   },
-  levelBadgeText: { fontSize: 11, fontWeight: '700' },
+  statusBadgeText: { fontSize: 12, fontFamily: 'Outfit_600SemiBold' },
+
+  studentCardBody: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    padding: 12,
+  },
+  dataCol: { flex: 1, alignItems: 'center' },
+  dataLabel: { color: '#64748B', fontSize: 11, fontFamily: 'Outfit_500Medium', marginBottom: 4, textTransform: 'uppercase' },
+  dataValue: { color: '#F1F5F9', fontSize: 15, fontFamily: 'Outfit_700Bold' },
+  
+  levelMiniBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  levelMiniBadgeText: { fontSize: 12, fontFamily: 'Outfit_700Bold' },
+
+  emptyState: {
+    paddingVertical: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    color: '#64748B',
+    fontFamily: 'Outfit_500Medium',
+    marginTop: 12,
+    fontSize: 15,
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#1E293B',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+  },
+  modalTitle: { color: '#F1F5F9', fontSize: 18, fontFamily: 'Outfit_700Bold' },
+  closeBtn: { padding: 4 },
+  modalScroll: { padding: 20 },
+  
+  filterSection: { marginBottom: 24 },
+  filterSectionTitle: { color: '#94A3B8', fontSize: 13, fontFamily: 'Outfit_600SemiBold', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+  filterPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#0F172A',
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginRight: 8,
+  },
+  filterPillActive: {
+    backgroundColor: '#6C63FF22',
+    borderColor: '#6C63FF',
+  },
+  filterPillText: {
+    color: '#94A3B8',
+    fontFamily: 'Outfit_500Medium',
+    fontSize: 14,
+  },
+  filterPillTextActive: {
+    color: '#6C63FF',
+    fontFamily: 'Outfit_700Bold',
+  },
+
+  modalFooter: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#334155',
+    flexDirection: 'row',
+    gap: 12,
+    backgroundColor: '#1E293B',
+  },
+  resetBtn: {
+    flex: 1,
+    height: 50,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  resetBtnText: { color: '#F1F5F9', fontFamily: 'Outfit_600SemiBold', fontSize: 16 },
+  applyBtn: {
+    flex: 2,
+    height: 50,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#6C63FF',
+  },
+  applyBtnText: { color: '#FFF', fontFamily: 'Outfit_700Bold', fontSize: 16 },
 });
