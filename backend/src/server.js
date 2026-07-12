@@ -8,6 +8,7 @@ const resumeRoutes = require('./routes/resumeRoutes');
 const firestoreRoutes = require('./routes/firestoreRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
 const syncRoutes = require('./routes/syncRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use('/api/resume', resumeRoutes);
 app.use('/api/db', firestoreRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/sync', syncRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health Check
 app.get('/', (req, res) => {

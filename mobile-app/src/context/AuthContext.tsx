@@ -12,6 +12,7 @@ import { auth, db } from '../config/firebase';
 interface AuthContextType {
   currentUser: User | null;
   userRole: string | null;
+  userData: any | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -29,6 +30,7 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userData, setUserData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,8 +42,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
             setUserRole(userDoc.data().role || 'student');
+            setUserData({ id: userDoc.id, ...userDoc.data() });
           } else {
             setUserRole('student'); // fallback
+            setUserData(null);
           }
         } catch (err) {
           console.error('Error fetching user role:', err);
@@ -49,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         setUserRole(null);
+        setUserData(null);
       }
       setLoading(false);
     });
@@ -64,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     createUserWithEmailAndPassword(auth, email, password).then(() => {});
 
   return (
-    <AuthContext.Provider value={{ currentUser, userRole, loading, login, logout, signup }}>
+    <AuthContext.Provider value={{ currentUser, userRole, userData, loading, login, logout, signup }}>
       {children}
     </AuthContext.Provider>
   );

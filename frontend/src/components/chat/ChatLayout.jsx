@@ -8,34 +8,61 @@ import NewChatModal from './NewChatModal';
 import { FaComments } from 'react-icons/fa';
 
 export default function ChatLayout() {
-  const { currentUser } = useAuth();
+  const { currentUser, userData } = useAuth();
   const [chats, setChats] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
 
   useEffect(() => {
     if (!currentUser) return;
-    const q = query(
-      collection(db, 'chats'),
-      where('participants', 'array-contains', currentUser.uid)
-    );
     
-    const unsubscribe = onSnapshot(q, (snap) => {
-      const fetchedChats = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // We use a Map to merge chats from both queries seamlessly
+    const chatsMap = new Map();
+    
+    const updateChats = () => {
+      const fetchedChats = Array.from(chatsMap.values());
       fetchedChats.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
       setChats(fetchedChats);
       
-      // Update active chat data if it changed
       if (activeChat) {
         const updatedActive = fetchedChats.find(c => c.id === activeChat.id);
         if (updatedActive) setActiveChat(updatedActive);
       }
-    }, (error) => {
-      console.error("Messages Error:", error);
+    };
+
+    // Query 1: Chats where user is a direct participant
+    const q1 = query(
+      collection(db, 'chats'),
+      where('participants', 'array-contains', currentUser.uid)
+    );
+    
+    const unsub1 = onSnapshot(q1, (snap) => {
+      snap.docs.forEach(doc => {
+        chatsMap.set(doc.id, { id: doc.id, ...doc.data() });
+      });
+      updateChats();
     });
 
-    return () => unsubscribe();
-  }, [currentUser, activeChat?.id]);
+    // Query 2: Chats targeted at the user's section
+    let unsub2 = () => {};
+    if (userData?.section) {
+      const q2 = query(
+        collection(db, 'chats'),
+        where('targetSection', 'in', [userData.section, 'All'])
+      );
+      unsub2 = onSnapshot(q2, (snap) => {
+        snap.docs.forEach(doc => {
+          chatsMap.set(doc.id, { id: doc.id, ...doc.data() });
+        });
+        updateChats();
+      });
+    }
+
+    return () => {
+      unsub1();
+      unsub2();
+    };
+  }, [currentUser, userData?.section, activeChat?.id]);
 
   return (
     <div className="flex h-[calc(100vh-120px)] bg-slate-900 rounded-xl overflow-hidden border border-slate-700 shadow-xl">

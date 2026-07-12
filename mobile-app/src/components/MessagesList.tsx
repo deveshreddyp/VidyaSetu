@@ -7,30 +7,61 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function MessagesList() {
-  const { currentUser } = useAuth();
+  const { currentUser, userData } = useAuth();
   const router = useRouter();
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!currentUser) return;
-    const q = query(
+    
+    const chatsMap = new Map();
+    
+    const updateChats = () => {
+      const fetchedChats = Array.from(chatsMap.values());
+      fetchedChats.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
+      setChats(fetchedChats);
+      setLoading(false);
+    };
+
+    // Query 1: Chats where user is a participant
+    const q1 = query(
       collection(db, 'chats'),
       where('participants', 'array-contains', currentUser.uid)
     );
     
-    const unsubscribe = onSnapshot(q, (snap) => {
-      const fetchedChats = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      fetchedChats.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
-      setChats(fetchedChats);
-      setLoading(false);
+    const unsub1 = onSnapshot(q1, (snap) => {
+      snap.docs.forEach(doc => {
+        chatsMap.set(doc.id, { id: doc.id, ...doc.data() });
+      });
+      updateChats();
     }, (error) => {
-      console.error("Messages Error:", error);
+      console.error("Messages Error 1:", error);
       setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [currentUser]);
+    // Query 2: Chats targeted at the user's section
+    let unsub2 = () => {};
+    if (userData?.section) {
+      const q2 = query(
+        collection(db, 'chats'),
+        where('targetSection', 'in', [userData.section, 'All'])
+      );
+      unsub2 = onSnapshot(q2, (snap) => {
+        snap.docs.forEach(doc => {
+          chatsMap.set(doc.id, { id: doc.id, ...doc.data() });
+        });
+        updateChats();
+      }, (error) => {
+        console.error("Messages Error 2:", error);
+      });
+    }
+
+    return () => {
+      unsub1();
+      unsub2();
+    };
+  }, [currentUser, userData?.section]);
 
   const getChatName = (chat) => {
     if (chat.type === 'group') return chat.name || 'Class Group';

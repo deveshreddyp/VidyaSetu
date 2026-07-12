@@ -9,6 +9,8 @@ export default function NewChatModal({ onClose, onChatCreated, currentUser }) {
   const [loading, setLoading] = useState(false);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [groupName, setGroupName] = useState('');
+  const [targetSection, setTargetSection] = useState('All');
+  const [availableSections, setAvailableSections] = useState([]);
   
   // Need current user's profile to get their name for the chat participants map
   const [currentUserProfile, setCurrentUserProfile] = useState(null);
@@ -17,6 +19,13 @@ export default function NewChatModal({ onClose, onChatCreated, currentUser }) {
     const fetchMe = async () => {
       const snap = await getDocs(query(collection(db, 'users'), where('email', '==', currentUser.email)));
       if (!snap.empty) setCurrentUserProfile(snap.docs[0].data());
+      
+      const studentsSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'student')));
+      const sections = new Set();
+      studentsSnap.docs.forEach(doc => {
+        if (doc.data().section) sections.add(doc.data().section);
+      });
+      setAvailableSections(Array.from(sections).sort());
     };
     fetchMe();
   }, [currentUser]);
@@ -89,10 +98,15 @@ export default function NewChatModal({ onClose, onChatCreated, currentUser }) {
       // To keep it simple and secure, let's just create a chat and the teacher can invite later.
       alert('Group Chat creation requires advanced role-based access. Creating a basic group instance.');
       
+      // Create a section tag if a specific section is targeted
+      const sectionTag = targetSection === 'All' ? 'ALL_SECTIONS' : `SECTION_${targetSection}`;
+      
       const chatData = {
         type: 'group',
         name: groupName,
-        participants: [currentUser.uid], // Teacher is the owner
+        targetSection: targetSection,
+        participants: [currentUser.uid],
+        members: [currentUser.uid, sectionTag],
         participantNames: {
           [currentUser.uid]: currentUserProfile?.name || currentUser.email
         },
@@ -146,6 +160,18 @@ export default function NewChatModal({ onClose, onChatCreated, currentUser }) {
                   placeholder="e.g. CS 101 Announcements"
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500"
                 />
+              <div className="mb-4">
+                <label className="block text-sm text-slate-400 mb-1">Target Section</label>
+                <select
+                  value={targetSection}
+                  onChange={(e) => setTargetSection(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500 appearance-none"
+                >
+                  <option value="All">All Sections</option>
+                  {availableSections.map(sec => (
+                    <option key={sec} value={sec}>Section {sec}</option>
+                  ))}
+                </select>
               </div>
               <button 
                 type="submit"

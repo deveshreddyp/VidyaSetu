@@ -18,6 +18,7 @@ export function useAuth() {
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [userRole, setUserRole] = useState(null); // 'student', 'teacher', 'admin'
+  const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Sign up and set role
@@ -105,8 +106,10 @@ export function AuthProvider({ children }) {
           const userDoc = await getDoc(doc(db, "users", user.uid));
           if (userDoc.exists()) {
             setUserRole(userDoc.data().role || 'student');
+            setUserData({ id: userDoc.id, ...userDoc.data() });
           } else {
             setUserRole('student'); // Fallback
+            setUserData(null);
           }
         } catch (error) {
           console.error("Error fetching user role:", error);
@@ -114,6 +117,7 @@ export function AuthProvider({ children }) {
         }
       } else {
         setUserRole(null);
+        setUserData(null);
       }
       setLoading(false);
     });
@@ -124,6 +128,7 @@ export function AuthProvider({ children }) {
   const value = {
     currentUser,
     userRole,
+    userData,
     signup,
     login,
     loginWithGoogle,
