@@ -7,16 +7,33 @@ import Toast from 'react-native-toast-message';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { db } from '../config/firebase';
 import { doc, setDoc } from 'firebase/firestore';
+import * as Notifications from 'expo-notifications';
 
 function RootLayoutNav() {
   const { currentUser, loading, userRole } = useAuth();
   const { expoPushToken } = usePushNotifications();
 
+  // Save push token to Firestore so other users can send notifications to this device
   useEffect(() => {
     if (currentUser && expoPushToken) {
-      setDoc(doc(db, 'users', currentUser.uid), { pushToken: expoPushToken }, { merge: true });
+      setDoc(doc(db, 'users', currentUser.uid), { pushToken: expoPushToken }, { merge: true })
+        .catch(err => console.error('Failed to save push token:', err));
     }
   }, [currentUser, expoPushToken]);
+
+  // Navigate to the correct chat when the user taps a push notification
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data as Record<string, string>;
+      const chatId = data?.chatId;
+      const chatName = data?.chatName || 'Chat';
+      const type = data?.type || 'direct';
+      if (chatId) {
+        router.push({ pathname: `/chat/${chatId}`, params: { chatName, type } });
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     if (loading) return;
@@ -33,20 +50,19 @@ function RootLayoutNav() {
     }
   }, [currentUser, loading, userRole]);
 
-  if (loading || (currentUser && !userRole)) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0F172A' }}>
-        <ActivityIndicator size="large" color="#6C63FF" />
-      </View>
-    );
-  }
-
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="login" />
-      <Stack.Screen name="(teacher)" />
-      <Stack.Screen name="(student)" />
-    </Stack>
+    <View style={{ flex: 1 }}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="login" />
+        <Stack.Screen name="(teacher)" />
+        <Stack.Screen name="(student)" />
+      </Stack>
+      {(loading || (currentUser && !userRole)) && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0F172A' }}>
+          <ActivityIndicator size="large" color="#6C63FF" />
+        </View>
+      )}
+    </View>
   );
 }
 

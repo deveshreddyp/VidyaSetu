@@ -87,12 +87,16 @@ export default function ChatRoomScreen() {
               'Accept-encoding': 'gzip, deflate',
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(tokens.map(token => ({
+            body: JSON.stringify(tokens.map((token: string) => ({
               to: token,
               sound: 'default',
               title: `New message from ${user.name}`,
               body: text,
-              data: { chatId: id },
+              data: {
+                chatId: typeof id === 'string' ? id : id?.[0],
+                chatName: Array.isArray(chatName) ? chatName[0] : (chatName || 'Chat'),
+                type: Array.isArray(type) ? type[0] : (type || 'direct'),
+              },
             }))),
           });
         }

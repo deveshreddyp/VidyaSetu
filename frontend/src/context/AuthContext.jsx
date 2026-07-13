@@ -8,6 +8,7 @@ import {
   signInWithPopup
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { useWebNotifications } from '../hooks/useWebNotifications';
 
 const AuthContext = createContext();
 
@@ -20,6 +21,9 @@ export function AuthProvider({ children }) {
   const [userRole, setUserRole] = useState(null); // 'student', 'teacher', 'admin'
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Initialize Web Push Notifications
+  useWebNotifications(currentUser);
 
   // Sign up and set role
   async function signup(email, password, role) {

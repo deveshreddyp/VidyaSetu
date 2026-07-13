@@ -17,6 +17,8 @@ export default function ChatWindow({ chat, currentUser }) {
 
     const unsubscribe = onSnapshot(q, (snap) => {
       setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      // Mark as read when messages are loaded/updated
+      localStorage.setItem(`lastRead_${chat.id}`, Date.now().toString());
       scrollToBottom();
     });
 
@@ -56,32 +58,35 @@ export default function ChatWindow({ chat, currentUser }) {
         const chatData = chatDoc.data();
         const otherParticipantIds = chatData.participants.filter(p => p !== currentUser.uid);
         
-        // Fetch push tokens for other participants
+        // Fetch push tokens for other participants (both mobile and web)
         const tokens = [];
         for (const pId of otherParticipantIds) {
           const userDoc = await getDoc(doc(db, 'users', pId));
-          if (userDoc.exists() && userDoc.data().pushToken) {
-            tokens.push(userDoc.data().pushToken);
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            if (data.pushToken) tokens.push(data.pushToken);
+            if (data.webPushToken) tokens.push(data.webPushToken);
           }
         }
         
         if (tokens.length > 0) {
           const senderName = chat.participantNames[currentUser.uid] || 'Unknown';
-          // Send push notification directly via Expo Push API
-          await fetch('https://exp.host/--/api/v2/push/send', {
+          // Send push notifications via our backend (handles both Expo & FCM Web Push)
+          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+          await fetch(`${apiUrl}/api/notifications/send`, {
             method: 'POST',
             headers: {
-              Accept: 'application/json',
-              'Accept-encoding': 'gzip, deflate',
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(tokens.map(token => ({
-              to: token,
-              sound: 'default',
+            body: JSON.stringify({
+              tokens,
               title: `New message from ${senderName}`,
               body: text,
-              data: { chatId: chat.id },
-            }))),
+              data: { 
+                chatId: chat.id,
+                chatName: getChatName() 
+              },
+            }),
           });
         }
       }

@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "819901877182",
+    "project_id": "vidyasetu-ai-2026",
+    "storage_bucket": "vidyasetu-ai-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:819901877182:android:8776052687b869c640c7ef",
+        "android_client_info": {
+          "package_name": "com.vidyasetu.ai"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "819901877182-rmv1a3nlb2i77j45sg7psqn2qrerfh26.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBntqptt38RH9YoHb8iJkteZgr4qLEIPok"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "819901877182-rmv1a3nlb2i77j45sg7psqn2qrerfh26.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

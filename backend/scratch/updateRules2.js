@@ -1,7 +1,11 @@
-const { admin } = require('../src/config/firebase');
+const admin = require('firebase-admin');
+const serviceAccount = require('../serviceAccountKey.json');
 
-const source = `
-rules_version = '2';
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+const source = `rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Allow users to read their own document
@@ -28,8 +32,7 @@ service cloud.firestore {
       allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
     }
   }
-}
-`;
+}`;
 
 async function updateRules() {
   try {

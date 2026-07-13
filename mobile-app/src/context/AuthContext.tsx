@@ -8,6 +8,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -41,15 +42,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Fetch role from Firestore users/{uid} — same logic as the web app
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
-            setUserRole(userDoc.data().role || 'student');
+            const role = userDoc.data().role || 'student';
+            setUserRole(role);
             setUserData({ id: userDoc.id, ...userDoc.data() });
+            // Cache role for offline boot
+            try { await AsyncStorage.setItem(`role_${user.uid}`, role); } catch (e) {}
           } else {
             setUserRole('student'); // fallback
             setUserData(null);
           }
         } catch (err) {
           console.error('Error fetching user role:', err);
-          setUserRole('student');
+          // Try to fallback to cached role if network fails
+          try {
+            const cachedRole = await AsyncStorage.getItem(`role_${user.uid}`);
+            setUserRole(cachedRole || 'student');
+          } catch (e) {
+            setUserRole('student');
+          }
         }
       } else {
         setUserRole(null);

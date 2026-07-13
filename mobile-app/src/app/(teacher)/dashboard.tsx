@@ -11,6 +11,7 @@ import {
   TextInput,
   Modal,
   Platform,
+  FlatList,
 } from 'react-native';
 import { collection, getDocs, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -80,6 +81,9 @@ export default function TeacherDashboard() {
       (snapshot) => {
         const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Student));
         setStudents(data);
+      },
+      (error) => {
+        console.error('Error fetching students snapshot:', error);
       }
     );
     return () => unsubscribe();
@@ -207,17 +211,19 @@ export default function TeacherDashboard() {
       </View>
 
       {/* Main Content */}
-      <ScrollView
+      <FlatList
+        data={filteredStudents}
+        keyExtractor={(item) => item.id}
         style={styles.listContainer}
         contentContainerStyle={styles.listContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6C63FF" />}
-      >
-        <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Students List</Text>
-          <Text style={styles.listCount}>{filteredStudents.length} Results</Text>
-        </View>
-
-        {filteredStudents.map((s) => {
+        ListHeaderComponent={
+          <View style={styles.listHeader}>
+            <Text style={styles.listTitle}>Students List</Text>
+            <Text style={styles.listCount}>{filteredStudents.length} Results</Text>
+          </View>
+        }
+        renderItem={({ item: s }) => {
           const color = LEVEL_COLORS[s.studentLevel || ''] || '#64748B';
           
           let displayScore = 'N/A';
@@ -243,7 +249,7 @@ export default function TeacherDashboard() {
           }
 
           return (
-            <View key={s.id} style={styles.studentCard}>
+            <View style={styles.studentCard}>
               <View style={styles.studentCardHeader}>
                 <View style={styles.studentMeta}>
                   <View style={[styles.avatar, { backgroundColor: color + '33' }]}>
@@ -287,17 +293,17 @@ export default function TeacherDashboard() {
               </View>
             </View>
           );
-        })}
-
-        {filteredStudents.length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons name="search-outline" size={48} color="#334155" />
-            <Text style={styles.emptyText}>No students match the current filters.</Text>
-          </View>
-        )}
-        
-        <View style={{ height: 40 }} />
-      </ScrollView>
+        }}
+        ListEmptyComponent={
+          filteredStudents.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="search-outline" size={48} color="#334155" />
+              <Text style={styles.emptyText}>No students match the current filters.</Text>
+            </View>
+          ) : null
+        }
+        ListFooterComponent={<View style={{ height: 40 }} />}
+      />
 
       {/* Filter Bottom Sheet Modal */}
       <Modal visible={isFilterModalOpen} animationType="slide" transparent={true}>

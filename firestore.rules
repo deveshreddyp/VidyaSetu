@@ -1,6 +1,3 @@
-const { admin } = require('../src/config/firebase');
-
-const source = `
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -29,26 +26,3 @@ service cloud.firestore {
     }
   }
 }
-`;
-
-async function updateRules() {
-  try {
-    const ruleset = await admin.securityRules().createRuleset({
-      source: {
-        files: [{
-          name: 'firestore.rules',
-          content: source
-        }]
-      }
-    });
-    
-    await admin.securityRules().releaseFirestoreRuleset(ruleset.name);
-    console.log("Successfully updated Firestore security rules!");
-    process.exit(0);
-  } catch (err) {
-    console.error("Error updating rules:", err);
-    process.exit(1);
-  }
-}
-
-updateRules();

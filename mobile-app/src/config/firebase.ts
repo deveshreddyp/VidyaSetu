@@ -1,8 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-// In Firebase v12, getReactNativePersistence is in 'firebase/auth/react-native'
-import { initializeAuth, getAuth } from 'firebase/auth';
-// @ts-ignore — no type declarations for this RN-specific entrypoint in firebase v12
-import { getReactNativePersistence } from 'firebase/auth/react-native';
+// @ts-ignore - TS doesn't see getReactNativePersistence, but Metro resolves it via RN export map
+import { initializeAuth, getAuth, getReactNativePersistence } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getFirestore } from 'firebase/firestore';
 
