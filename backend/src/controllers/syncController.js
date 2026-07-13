@@ -104,14 +104,16 @@ const syncStudentsFromSheet = async (req, res) => {
           updatedAt: new Date().toISOString()
         };
 
+        let newAuthUid = null;
         // CREATE AUTH ACCOUNT (If not exists)
         if (!existingUsersMap.has(email)) {
           try {
-            await admin.auth().createUser({
+            const userRecord = await admin.auth().createUser({
               email: email,
               password: 'password12345678', // Default password requested
               displayName: name,
             });
+            newAuthUid = userRecord.uid;
             authCreatedCount++;
           } catch (error) {
             if (error.code !== 'auth/email-already-exists') {
@@ -126,7 +128,8 @@ const syncStudentsFromSheet = async (req, res) => {
           currentBatch.set(existingUsersMap.get(email), studentData, { merge: true });
           updateCount++;
         } else {
-          const newDocRef = db.collection('users').doc();
+          // Use the new Auth UID if available, otherwise fallback to random (though it shouldn't happen)
+          const newDocRef = newAuthUid ? db.collection('users').doc(newAuthUid) : db.collection('users').doc();
           currentBatch.set(newDocRef, { ...studentData, createdAt: new Date().toISOString() });
           addCount++;
           // Immediately add to existing map to avoid duplicates in the same run

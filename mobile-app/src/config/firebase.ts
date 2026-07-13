@@ -13,16 +13,28 @@ const firebaseConfig = {
   appId: '1:819901877182:web:d6f36f3a00be0ccf40c7ef',
 };
 
+import { Platform } from 'react-native';
+
 // Capture BEFORE initializeApp so the flag is accurate on Expo hot-reload.
 // If we check getApps().length AFTER initializeApp, it's always 1 on every load,
 // and initializeAuth would crash with "auth/already-initialized" on the 2nd load.
 const isNewApp = getApps().length === 0;
 const app = isNewApp ? initializeApp(firebaseConfig) : getApp();
-export const auth = isNewApp
-  ? initializeAuth(app, {
+
+let authInstance;
+if (isNewApp) {
+  if (Platform.OS === 'web' || typeof getReactNativePersistence !== 'function') {
+    authInstance = getAuth(app);
+  } else {
+    authInstance = initializeAuth(app, {
       persistence: getReactNativePersistence(AsyncStorage),
-    })
-  : getAuth(app);
+    });
+  }
+} else {
+  authInstance = getAuth(app);
+}
+
+export const auth = authInstance;
 export const db = getFirestore(app);
 export default app;
 

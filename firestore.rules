@@ -4,12 +4,12 @@ service cloud.firestore {
     match /users/{userId} {
       // Any logged-in user can read any profile (needed for chat search & name display)
       allow read: if request.auth != null;
-      // Users can always write to their OWN document (push token, profile updates, signup)
-      allow write: if request.auth != null && request.auth.uid == userId;
-      // Teachers can write to ANY user document (for Excel sync, etc.)
-      allow write: if request.auth != null
-                   && request.auth.uid != userId
-                   && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+      // Users can write to their own document (no extra reads needed).
+      // Teachers can write to anyone's document (requires a read to verify teacher role).
+      allow write: if request.auth != null && (
+        request.auth.uid == userId ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher'
+      );
     }
     
     // Chat rules - any authenticated user can read/write chats and messages

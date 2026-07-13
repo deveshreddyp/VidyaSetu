@@ -69,25 +69,37 @@ export default function ChatRoomScreen() {
         const chatData = chatDoc.data();
         const otherParticipantIds = (chatData.participants as string[]).filter((p: string) => p !== currentUser.uid);
         
-        // Fetch push tokens server-side to bypass client firestore rules
+        // Fetch push tokens directly from Firestore and send via Expo API
         if (otherParticipantIds.length > 0) {
-          const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://vidyasetu-backend.vercel.app';
-          await fetch(`${API_URL}/api/notifications/send`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              userIds: otherParticipantIds,
-              title: `New message from ${user.name}`,
-              body: text,
-              data: {
-                chatId: typeof id === 'string' ? id : id?.[0] || '',
-                chatName: Array.isArray(chatName) ? chatName[0] : (chatName || 'Chat'),
-                type: Array.isArray(type) ? type[0] : (type || 'direct'),
+          const tokens = [];
+          for (const pId of otherParticipantIds) {
+            const pDoc = await getDoc(doc(db, 'users', pId));
+            if (pDoc.exists() && pDoc.data().pushToken) {
+              tokens.push(pDoc.data().pushToken);
+            }
+          }
+
+          if (tokens.length > 0) {
+            await fetch('https://exp.host/--/api/v2/push/send', {
+              method: 'POST',
+              headers: {
+                Accept: 'application/json',
+                'Accept-encoding': 'gzip, deflate',
+                'Content-Type': 'application/json',
               },
-            }),
-          });
+              body: JSON.stringify({
+                to: tokens,
+                sound: 'default',
+                title: `New message from ${user.name}`,
+                body: text,
+                data: {
+                  chatId: typeof id === 'string' ? id : id?.[0] || '',
+                  chatName: Array.isArray(chatName) ? chatName[0] : (chatName || 'Chat'),
+                  type: Array.isArray(type) ? type[0] : (type || 'direct'),
+                },
+              }),
+            });
+          }
         }
       }
     } catch (e) {
