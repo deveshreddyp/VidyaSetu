@@ -32,9 +32,13 @@ export function useWebNotifications(currentUser) {
           return;
         }
 
-        const token = await getToken(messaging, {
-          vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-        });
+        const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+        if (!vapidKey) {
+          console.error("VITE_FIREBASE_VAPID_KEY is missing! You must add it to Vercel Environment Variables.");
+          return;
+        }
+
+        const token = await getToken(messaging, { vapidKey });
 
         if (token) {
           setWebPushToken(token);
