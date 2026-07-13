@@ -34,6 +34,8 @@ export default async function handler(req, res) {
     const messages = expoTokens.map(token => ({
       to: token,
       sound: 'default',
+      priority: 'high',
+      badge: 1,
       title: title || 'New Message',
       body: body || 'You received a new message',
       data: data || {},

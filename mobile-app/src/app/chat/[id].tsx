@@ -47,9 +47,7 @@ export default function ChatRoomScreen() {
   const onSend = useCallback(async (newMessages: IMessage[] = []) => {
     if (!id || !currentUser || newMessages.length === 0) return;
     const { text, user } = newMessages[0];
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     try {
       await addDoc(collection(db, 'chats', id, 'messages'), {
         text,
