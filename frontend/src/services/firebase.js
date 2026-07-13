@@ -19,12 +19,10 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
-// Initialize messaging only if supported by the browser
-let messaging = null;
-isSupported().then((supported) => {
-  if (supported) {
-    messaging = getMessaging(app);
-  }
-}).catch(console.error);
+// Initialize messaging only if supported by the browser.
+// Export a promise so consumers can `await` it instead of reading a stale null.
+const messagingPromise = isSupported().then((supported) => {
+  return supported ? getMessaging(app) : null;
+}).catch(() => null);
 
-export { auth, db, storage, googleProvider, messaging };
+export { auth, db, storage, googleProvider, messagingPromise };
