@@ -9,15 +9,21 @@ if (!admin.apps.length) {
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
   if (serviceAccountJson) {
-    // If the JSON is provided directly as an environment variable (best for Railway/Vercel)
-    const serviceAccount = JSON.parse(serviceAccountJson);
-    // Defensively handle Vercel double-escaping the newlines in the JSON string
-    if (serviceAccount.private_key) {
-      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+    try {
+      // If the JSON is provided directly as an environment variable (best for Railway/Vercel)
+      const serviceAccount = JSON.parse(serviceAccountJson);
+      // Defensively handle Vercel double-escaping the newlines in the JSON string
+      if (serviceAccount.private_key) {
+        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+      }
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+    } catch (e) {
+      console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON:", e.message);
+      // Initialize with basic project ID to prevent total crash
+      admin.initializeApp({ projectId: 'vidyasetu-ai-2026' });
     }
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
   } else if (serviceAccountPath) {
     // If a file path is provided (best for Render or local development)
     const absolutePath = path.resolve(process.cwd(), serviceAccountPath);
