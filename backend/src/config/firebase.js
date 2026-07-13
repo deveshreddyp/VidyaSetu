@@ -11,6 +11,10 @@ if (!admin.apps.length) {
   if (serviceAccountJson) {
     // If the JSON is provided directly as an environment variable (best for Railway/Vercel)
     const serviceAccount = JSON.parse(serviceAccountJson);
+    // Defensively handle Vercel double-escaping the newlines in the JSON string
+    if (serviceAccount.private_key) {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+    }
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
