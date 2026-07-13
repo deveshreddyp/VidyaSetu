@@ -1,5 +1,8 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
+// In Firebase v12, getReactNativePersistence is in 'firebase/auth/react-native'
+import { initializeAuth, getAuth } from 'firebase/auth';
+// @ts-ignore — no type declarations for this RN-specific entrypoint in firebase v12
+import { getReactNativePersistence } from 'firebase/auth/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getFirestore } from 'firebase/firestore';
 
@@ -12,9 +15,16 @@ const firebaseConfig = {
   appId: '1:819901877182:web:d6f36f3a00be0ccf40c7ef',
 };
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage)
-});
+// Capture BEFORE initializeApp so the flag is accurate on Expo hot-reload.
+// If we check getApps().length AFTER initializeApp, it's always 1 on every load,
+// and initializeAuth would crash with "auth/already-initialized" on the 2nd load.
+const isNewApp = getApps().length === 0;
+const app = isNewApp ? initializeApp(firebaseConfig) : getApp();
+export const auth = isNewApp
+  ? initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    })
+  : getAuth(app);
 export const db = getFirestore(app);
 export default app;
+

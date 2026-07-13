@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, ActivityIndicator, Platform, KeyboardAvoidingView, Text, TouchableOpacity } from 'react-native';
-import { GiftedChat, Bubble, Send, InputToolbar } from 'react-native-gifted-chat';
+import { GiftedChat, Bubble, Send, InputToolbar, IMessage, BubbleProps, SendProps, InputToolbarProps } from 'react-native-gifted-chat';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -9,10 +9,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 export default function ChatRoomScreen() {
-  const { id, chatName, type } = useLocalSearchParams();
+  const { id: rawId, chatName, type } = useLocalSearchParams();
+  // useLocalSearchParams returns string | string[] — coerce to string
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
   const { currentUser } = useAuth();
   const router = useRouter();
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<IMessage[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,15 +25,15 @@ export default function ChatRoomScreen() {
     );
 
     const unsubscribe = onSnapshot(q, (snap) => {
-      const parsedMessages = snap.docs.map(doc => {
-        const data = doc.data();
+      const parsedMessages: IMessage[] = snap.docs.map(d => {
+        const data = d.data();
         return {
-          _id: doc.id,
-          text: data.text,
+          _id: d.id,
+          text: data.text ?? '',
           createdAt: data.timestamp ? data.timestamp.toDate() : new Date(),
           user: {
-            _id: data.senderId,
-            name: data.senderName,
+            _id: data.senderId as string,
+            name: data.senderName as string,
           },
         };
       });
@@ -42,7 +44,7 @@ export default function ChatRoomScreen() {
     return () => unsubscribe();
   }, [id, currentUser]);
 
-  const onSend = useCallback(async (newMessages = []) => {
+  const onSend = useCallback(async (newMessages: IMessage[] = []) => {
     if (!id || !currentUser || newMessages.length === 0) return;
     const { text, user } = newMessages[0];
 
@@ -65,7 +67,7 @@ export default function ChatRoomScreen() {
       const chatDoc = await getDoc(doc(db, 'chats', id));
       if (chatDoc.exists()) {
         const chatData = chatDoc.data();
-        const otherParticipantIds = chatData.participants.filter(p => p !== currentUser.uid);
+        const otherParticipantIds = (chatData.participants as string[]).filter((p: string) => p !== currentUser.uid);
         
         // Fetch push tokens for other participants
         const tokens = [];
@@ -101,7 +103,7 @@ export default function ChatRoomScreen() {
     }
   }, [id, currentUser]);
 
-  const renderBubble = (props) => {
+  const renderBubble = (props: BubbleProps<IMessage>) => {
     return (
       <Bubble
         {...props}
@@ -117,7 +119,7 @@ export default function ChatRoomScreen() {
     );
   };
 
-  const renderSend = (props) => {
+  const renderSend = (props: SendProps<IMessage>) => {
     return (
       <Send {...props}>
         <View style={{ marginRight: 15, marginBottom: 10 }}>
@@ -127,7 +129,7 @@ export default function ChatRoomScreen() {
     );
   };
 
-  const renderInputToolbar = (props) => {
+  const renderInputToolbar = (props: InputToolbarProps<IMessage>) => {
     return (
       <InputToolbar
         {...props}
@@ -137,7 +139,6 @@ export default function ChatRoomScreen() {
           borderTopWidth: 1,
           paddingTop: 4,
         }}
-        textInputStyle={{ color: '#fff', fontFamily: 'Outfit_400Regular' }}
       />
     );
   };
@@ -162,19 +163,16 @@ export default function ChatRoomScreen() {
         </View>
       </View>
 
-      <GiftedChat
-        messages={messages}
-        onSend={msgs => onSend(msgs)}
-        user={{
-          _id: currentUser?.uid,
-          name: currentUser?.email?.split('@')[0] || 'User'
-        }}
-        renderBubble={renderBubble}
-        renderSend={renderSend}
-        renderInputToolbar={renderInputToolbar}
-        alwaysShowSend
-        bottomOffset={Platform.OS === 'ios' ? 32 : 0}
-      />
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      {React.createElement(GiftedChat as any, {
+        messages,
+        onSend: (msgs: IMessage[]) => onSend(msgs),
+        user: { _id: currentUser?.uid ?? '', name: currentUser?.email?.split('@')[0] || 'User' },
+        renderBubble,
+        renderSend,
+        renderInputToolbar,
+        bottomOffset: Platform.OS === 'ios' ? 32 : 0,
+      })}
       {Platform.OS === 'android' && <KeyboardAvoidingView behavior="padding" />}
     </View>
   );

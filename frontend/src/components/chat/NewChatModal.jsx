@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { FaTimes, FaSearch, FaUserGraduate, FaChalkboardTeacher, FaUsers } from 'react-icons/fa';
 
@@ -17,9 +17,10 @@ export default function NewChatModal({ onClose, onChatCreated, currentUser }) {
 
   React.useEffect(() => {
     const fetchMe = async () => {
-      const snap = await getDocs(query(collection(db, 'users'), where('email', '==', currentUser.email)));
-      if (!snap.empty) setCurrentUserProfile(snap.docs[0].data());
-      
+      // Direct UID lookup — O(1), reliable even after doc migration
+      const myDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      if (myDoc.exists()) setCurrentUserProfile(myDoc.data());
+
       const studentsSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'student')));
       const sections = new Set();
       studentsSnap.docs.forEach(doc => {
@@ -57,19 +58,24 @@ export default function NewChatModal({ onClose, onChatCreated, currentUser }) {
 
   const startDirectChat = async (otherUser) => {
     try {
-      // Check if chat already exists
-      const q = query(collection(db, 'chats'), where('participants', '==', [currentUser.uid, otherUser.id].sort()));
-      const existSnap = await getDocs(q);
-      
-      if (!existSnap.empty) {
-        onChatCreated({ id: existSnap.docs[0].id, ...existSnap.docs[0].data() });
+      // Use a deterministic chat ID: sort the two UIDs and join with underscore.
+      // This guarantees both users always resolve to the SAME Firestore document,
+      // fixing the bug where Firestore array-equality queries always returned empty
+      // and created duplicate chat docs that the other student could never see.
+      const sortedIds = [currentUser.uid, otherUser.id].sort();
+      const chatId = sortedIds.join('_');
+
+      // Check if this DM already exists with a direct doc lookup (O(1), reliable)
+      const existingDoc = await getDoc(doc(db, 'chats', chatId));
+      if (existingDoc.exists()) {
+        onChatCreated({ id: existingDoc.id, ...existingDoc.data() });
         return;
       }
 
-      // Create new chat
+      // Create new direct chat with the deterministic ID
       const chatData = {
         type: 'direct',
-        participants: [currentUser.uid, otherUser.id].sort(),
+        participants: sortedIds,
         participantNames: {
           [currentUser.uid]: currentUserProfile?.name || currentUser.email,
           [otherUser.id]: otherUser.name || otherUser.email
@@ -77,9 +83,9 @@ export default function NewChatModal({ onClose, onChatCreated, currentUser }) {
         updatedAt: serverTimestamp(),
         lastMessage: 'Chat started'
       };
-      
-      const docRef = await addDoc(collection(db, 'chats'), chatData);
-      onChatCreated({ id: docRef.id, ...chatData });
+
+      await setDoc(doc(db, 'chats', chatId), chatData);
+      onChatCreated({ id: chatId, ...chatData });
     } catch (err) {
       console.error('Error starting chat', err);
     }
@@ -90,23 +96,11 @@ export default function NewChatModal({ onClose, onChatCreated, currentUser }) {
     if (!groupName.trim() || currentUserProfile?.role !== 'teacher') return;
     
     try {
-      // For simplicity, a group chat broadcasts to all students. We can add all students to participants.
-      // In a real app, you might use subcollections for members to bypass the 10-item array limit in Firestore queries.
-      // As a workaround, we'll store the group chat and fetch it differently, or just add the teacher.
-      // Actually, let's just make a 'group' chat where we don't query by `array-contains` for students,
-      // but students can see all 'group' chats. 
-      // To keep it simple and secure, let's just create a chat and the teacher can invite later.
-      alert('Group Chat creation requires advanced role-based access. Creating a basic group instance.');
-      
-      // Create a section tag if a specific section is targeted
-      const sectionTag = targetSection === 'All' ? 'ALL_SECTIONS' : `SECTION_${targetSection}`;
-      
       const chatData = {
         type: 'group',
         name: groupName,
         targetSection: targetSection,
         participants: [currentUser.uid],
-        members: [currentUser.uid, sectionTag],
         participantNames: {
           [currentUser.uid]: currentUserProfile?.name || currentUser.email
         },
@@ -114,8 +108,10 @@ export default function NewChatModal({ onClose, onChatCreated, currentUser }) {
         lastMessage: 'Group created'
       };
       
-      const docRef = await addDoc(collection(db, 'chats'), chatData);
-      onChatCreated({ id: docRef.id, ...chatData });
+      // Use auto-generated ID for group chats (multiple groups can exist)
+      const newGroupRef = doc(collection(db, 'chats'));
+      await setDoc(newGroupRef, chatData);
+      onChatCreated({ id: newGroupRef.id, ...chatData });
     } catch (err) {
       console.error(err);
     }
