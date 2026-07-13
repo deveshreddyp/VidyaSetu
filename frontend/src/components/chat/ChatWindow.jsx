@@ -58,26 +58,37 @@ export default function ChatWindow({ chat, currentUser }) {
         const chatData = chatDoc.data();
         const otherParticipantIds = chatData.participants.filter(p => p !== currentUser.uid);
         
-        // Fetch push tokens for other participants server-side by passing userIds
+        // Fetch push tokens for other participants directly to bypass broken backend
         if (otherParticipantIds.length > 0) {
           const senderName = chat.participantNames[currentUser.uid] || 'Unknown';
-          // Send push notifications via our backend (handles both Expo & FCM Web Push)
-          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-          await fetch(`${apiUrl}/api/notifications/send`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              userIds: otherParticipantIds,
-              title: `New message from ${senderName}`,
-              body: text,
-              data: { 
-                chatId: chat.id,
-                chatName: getChatName() 
+          const tokens = [];
+          for (const pId of otherParticipantIds) {
+            const pDoc = await getDoc(doc(db, 'users', pId));
+            if (pDoc.exists() && pDoc.data().pushToken) {
+              tokens.push(pDoc.data().pushToken);
+            }
+          }
+
+          if (tokens.length > 0) {
+            await fetch('https://exp.host/--/api/v2/push/send', {
+              method: 'POST',
+              headers: {
+                Accept: 'application/json',
+                'Accept-encoding': 'gzip, deflate',
+                'Content-Type': 'application/json',
               },
-            }),
-          });
+              body: JSON.stringify({
+                to: tokens,
+                sound: 'default',
+                title: `New message from ${senderName}`,
+                body: text,
+                data: { 
+                  chatId: chat.id,
+                  chatName: getChatName() 
+                },
+              }),
+            });
+          }
         }
       }
     } catch (err) {

@@ -53,12 +53,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (err) {
           console.error('Error fetching user role:', err);
-          // Try to fallback to cached role if network fails
+          // Only fallback to cache if available, otherwise keep null to show loading indicator until network recovers
           try {
             const cachedRole = await AsyncStorage.getItem(`role_${user.uid}`);
-            setUserRole(cachedRole || 'student');
+            if (cachedRole) setUserRole(cachedRole);
           } catch (e) {
-            setUserRole('student');
+            // Do not aggressively set student here on network failure
           }
         }
       } else {
