@@ -7,14 +7,34 @@ let expo = new Expo();
 
 // Send Push Notification
 router.post('/send', async (req, res) => {
-  const { tokens, title, body, data } = req.body;
+  const { tokens = [], userIds = [], title, body, data } = req.body;
   
-  if (!tokens || !tokens.length) {
-    return res.status(400).json({ error: 'No tokens provided' });
+  if (!tokens.length && !userIds.length) {
+    return res.status(400).json({ error: 'No tokens or userIds provided' });
   }
 
   const messages = [];
   const webTokens = [];
+  
+  // Resolve userIds to tokens server-side to bypass client firestore rules
+  if (userIds.length > 0) {
+    try {
+      // Note: In a production app with huge arrays, chunk this. For our scale, it's fine.
+      const usersRef = admin.firestore().collection('users');
+      // Firebase 'in' queries support max 10 elements. Chunking:
+      for (let i = 0; i < userIds.length; i += 10) {
+        const chunk = userIds.slice(i, i + 10);
+        const snapshot = await usersRef.where(admin.firestore.FieldPath.documentId(), 'in', chunk).get();
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.pushToken) tokens.push(data.pushToken);
+          if (data.webPushToken) tokens.push(data.webPushToken);
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching user tokens:', err);
+    }
+  }
   
   for (let pushToken of tokens) {
     if (Expo.isExpoPushToken(pushToken)) {

@@ -58,18 +58,8 @@ export default function ChatWindow({ chat, currentUser }) {
         const chatData = chatDoc.data();
         const otherParticipantIds = chatData.participants.filter(p => p !== currentUser.uid);
         
-        // Fetch push tokens for other participants (both mobile and web)
-        const tokens = [];
-        for (const pId of otherParticipantIds) {
-          const userDoc = await getDoc(doc(db, 'users', pId));
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            if (data.pushToken) tokens.push(data.pushToken);
-            if (data.webPushToken) tokens.push(data.webPushToken);
-          }
-        }
-        
-        if (tokens.length > 0) {
+        // Fetch push tokens for other participants server-side by passing userIds
+        if (otherParticipantIds.length > 0) {
           const senderName = chat.participantNames[currentUser.uid] || 'Unknown';
           // Send push notifications via our backend (handles both Expo & FCM Web Push)
           const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -79,7 +69,7 @@ export default function ChatWindow({ chat, currentUser }) {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              tokens,
+              userIds: otherParticipantIds,
               title: `New message from ${senderName}`,
               body: text,
               data: { 

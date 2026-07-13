@@ -69,35 +69,24 @@ export default function ChatRoomScreen() {
         const chatData = chatDoc.data();
         const otherParticipantIds = (chatData.participants as string[]).filter((p: string) => p !== currentUser.uid);
         
-        // Fetch push tokens for other participants
-        const tokens = [];
-        for (const pId of otherParticipantIds) {
-          const userDoc = await getDoc(doc(db, 'users', pId));
-          if (userDoc.exists() && userDoc.data().pushToken) {
-            tokens.push(userDoc.data().pushToken);
-          }
-        }
-        
-        if (tokens.length > 0) {
-          // Send push notification directly via Expo Push API
-          await fetch('https://exp.host/--/api/v2/push/send', {
+        // Fetch push tokens server-side to bypass client firestore rules
+        if (otherParticipantIds.length > 0) {
+          const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://vidyasetu-backend.vercel.app';
+          await fetch(`${API_URL}/api/notifications/send`, {
             method: 'POST',
             headers: {
-              Accept: 'application/json',
-              'Accept-encoding': 'gzip, deflate',
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(tokens.map((token: string) => ({
-              to: token,
-              sound: 'default',
+            body: JSON.stringify({
+              userIds: otherParticipantIds,
               title: `New message from ${user.name}`,
               body: text,
               data: {
-                chatId: typeof id === 'string' ? id : id?.[0],
+                chatId: typeof id === 'string' ? id : id?.[0] || '',
                 chatName: Array.isArray(chatName) ? chatName[0] : (chatName || 'Chat'),
                 type: Array.isArray(type) ? type[0] : (type || 'direct'),
               },
-            }))),
+            }),
           });
         }
       }
