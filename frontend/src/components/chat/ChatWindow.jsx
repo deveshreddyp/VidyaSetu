@@ -58,26 +58,34 @@ export default function ChatWindow({ chat, currentUser }) {
         const chatData = chatDoc.data();
         const otherParticipantIds = chatData.participants.filter(p => p !== currentUser.uid);
         
-        // Fetch push tokens for other participants server-side by passing userIds
+        // Fetch push tokens for other participants locally and send to internal API
         if (otherParticipantIds.length > 0) {
-          const senderName = chat.participantNames[currentUser.uid] || 'Unknown';
-          // Send push notifications via our backend (handles both Expo & FCM Web Push)
-          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-          await fetch(`${apiUrl}/api/notifications/send`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              userIds: otherParticipantIds,
-              title: `New message from ${senderName}`,
-              body: text,
-              data: { 
-                chatId: chat.id,
-                chatName: getChatName() 
-              },
-            }),
-          });
+          const tokens = [];
+          for (const uid of otherParticipantIds) {
+            try {
+              const udoc = await getDoc(doc(db, 'users', uid));
+              if (udoc.exists()) {
+                const data = udoc.data();
+                if (data.expoPushToken) tokens.push(data.expoPushToken);
+                else if (data.pushToken) tokens.push(data.pushToken);
+              }
+            } catch (err) {
+              console.warn('Could not fetch token for', uid, err);
+            }
+          }
+          
+          if (tokens.length > 0) {
+            await fetch('/api/notifications/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                tokens,
+                title: `New message from ${currentUser.displayName || 'someone'}`,
+                body: text,
+                data: { chatId: chat.id, url: `/chat/${chat.id}` }
+              })
+            });
+          }
         }
       }
     } catch (err) {
