@@ -53,6 +53,13 @@ export function useWebNotifications(currentUser) {
 
       // Handle foreground messages
       unsubscribe = onMessage(messaging, (payload) => {
+        // Play notification sound
+        try {
+          const audio = new Audio('https://actions.google.com/sounds/v1/ui/beep_short.ogg');
+          audio.volume = 0.8;
+          audio.play().catch(e => console.log('Audio autoplay blocked', e));
+        } catch (e) {}
+
         toast.custom((t) => (
           <div
             className={`${
