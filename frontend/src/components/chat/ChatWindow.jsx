@@ -20,10 +20,29 @@ export default function ChatWindow({ chat, currentUser }) {
       // Mark as read when messages are loaded/updated
       localStorage.setItem(`lastRead_${chat.id}`, Date.now().toString());
       scrollToBottom();
+
+      // Play sound for brand new incoming messages
+      snap.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          // Check if message is from someone else AND was sent recently (last 10 seconds)
+          // This prevents playing sounds for old messages on initial load
+          if (data.senderId !== currentUser.uid && data.timestamp) {
+            const timeDiff = Date.now() - data.timestamp.toMillis();
+            if (timeDiff < 10000) {
+              try {
+                const audio = new Audio('https://actions.google.com/sounds/v1/ui/beep_short.ogg');
+                audio.volume = 0.8;
+                audio.play().catch(e => console.log('Audio autoplay blocked', e));
+              } catch (e) {}
+            }
+          }
+        }
+      });
     });
 
     return () => unsubscribe();
-  }, [chat?.id]);
+  }, [chat?.id, currentUser?.uid]);
 
   const scrollToBottom = () => {
     setTimeout(() => {
