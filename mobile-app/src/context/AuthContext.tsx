@@ -6,7 +6,7 @@ import {
   signOut,
   createUserWithEmailAndPassword,
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocFromServer, getDocFromCache } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -36,35 +36,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
+      // CRITICAL: Clear role immediately so stale role from previous session
+      // is never used for routing while the new role is being fetched.
+      setUserRole(null);
+      setUserData(null);
       setCurrentUser(user);
+
       if (user) {
+        const userDocRef = doc(db, 'users', user.uid);
+        let role: string | null = null;
+        let fetchedUserData: any = null;
+
+        // 1. Try to get the freshest data from the server first.
+        //    This prevents Firestore's local disk cache from serving a stale role
+        //    (e.g., after logging out as teacher and back in as student, the cache
+        //    might still hold the teacher role document).
         try {
-          // Fetch role from Firestore users/{uid} — same logic as the web app
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            const role = userDoc.data().role || 'student';
-            setUserRole(role);
-            setUserData({ id: userDoc.id, ...userDoc.data() });
-            // Cache role for offline boot
-            try { await AsyncStorage.setItem(`role_${user.uid}`, role); } catch (e) {}
-          } else {
-            setUserRole('student'); // fallback
-            setUserData(null);
+          const serverDoc = await getDocFromServer(userDocRef);
+          if (serverDoc.exists()) {
+            role = serverDoc.data().role || 'student';
+            fetchedUserData = { id: serverDoc.id, ...serverDoc.data() };
           }
-        } catch (err) {
-          console.error('Error fetching user role:', err);
-          // Only fallback to cache if available, otherwise keep null to show loading indicator until network recovers
+        } catch (serverErr) {
+          console.warn('Could not fetch role from server, trying cache:', serverErr);
+          // 2. Server unreachable — fall back to Firestore local cache
           try {
-            const cachedRole = await AsyncStorage.getItem(`role_${user.uid}`);
-            if (cachedRole) setUserRole(cachedRole);
-          } catch (e) {
-            // Do not aggressively set student here on network failure
+            const cacheDoc = await getDocFromCache(userDocRef);
+            if (cacheDoc.exists()) {
+              role = cacheDoc.data().role || 'student';
+              fetchedUserData = { id: cacheDoc.id, ...cacheDoc.data() };
+            }
+          } catch (cacheErr) {
+            // 3. No Firestore cache either — try AsyncStorage
+            console.warn('Firestore cache miss, trying AsyncStorage:', cacheErr);
+            try {
+              const cachedRole = await AsyncStorage.getItem(`role_${user.uid}`);
+              if (cachedRole) role = cachedRole;
+            } catch (e) {
+              // No cached role available at all
+            }
           }
         }
-      } else {
-        setUserRole(null);
-        setUserData(null);
+
+        if (role) {
+          setUserRole(role);
+          setUserData(fetchedUserData);
+          // Update AsyncStorage cache with the latest role
+          try { await AsyncStorage.setItem(`role_${user.uid}`, role); } catch (e) {}
+        } else {
+          // User document doesn't exist at all — default to student
+          setUserRole('student');
+          setUserData(null);
+        }
       }
+      // If user is null (logged out), role & userData are already cleared above.
       setLoading(false);
     });
     return unsub;
@@ -73,7 +98,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = (email: string, password: string) =>
     signInWithEmailAndPassword(auth, email, password).then(() => {});
 
-  const logout = () => signOut(auth);
+  const logout = async () => {
+    // Clear role state immediately before signing out to prevent
+    // any brief flash of the old role's UI during the transition.
+    setUserRole(null);
+    setUserData(null);
+    await signOut(auth);
+  };
 
   const signup = (email: string, password: string) =>
     createUserWithEmailAndPassword(auth, email, password).then(() => {});

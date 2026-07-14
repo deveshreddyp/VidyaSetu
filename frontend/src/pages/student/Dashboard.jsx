@@ -80,14 +80,15 @@ export default function StudentDashboard() {
     try {
       const fd = new FormData();
       fd.append('pdfFile', file);
-      const parseRes = await fetch('http://localhost:5000/api/generator/parse-pdf', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const parseRes = await fetch(`${apiUrl}/api/generator/parse-pdf`, {
         method: 'POST',
         body: fd
       });
       if (!parseRes.ok) throw new Error('Failed to extract text from PDF');
       const parseData = await parseRes.json();
       
-      const notesRes = await fetch('http://localhost:5000/api/generator/mastery-notes', {
+      const notesRes = await fetch(`${apiUrl}/api/generator/mastery-notes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contextText: parseData.text })

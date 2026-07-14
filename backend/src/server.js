@@ -12,8 +12,15 @@ const notificationRoutes = require('./routes/notificationRoutes');
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// Middleware — explicit CORS configuration for production
+app.use(cors({
+  origin: true,  // Reflect the request origin (allows all origins like cors() but also sets Vary header properly)
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true,
+}));
+// Ensure OPTIONS preflight is handled at Express level as well
+app.options('*', cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
