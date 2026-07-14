@@ -38,7 +38,11 @@ export function useWebNotifications(currentUser) {
           return;
         }
 
-        const token = await getToken(messaging, { vapidKey });
+        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        const token = await getToken(messaging, { 
+          vapidKey, 
+          serviceWorkerRegistration: registration 
+        });
 
         if (token) {
           setWebPushToken(token);
