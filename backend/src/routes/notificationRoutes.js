@@ -1,12 +1,23 @@
 const express = require('express');
-const { Expo } = require('expo-server-sdk');
 const { admin } = require('../config/firebase');
 
 const router = express.Router();
-let expo = new Expo();
+let Expo = null;
+let expo = null;
 
 // Send Push Notification
 router.post('/send', async (req, res) => {
+  if (!Expo) {
+    try {
+      const sdk = await import('expo-server-sdk');
+      Expo = sdk.Expo;
+      expo = new Expo();
+    } catch (err) {
+      console.error('Failed to load expo-server-sdk:', err);
+      return res.status(500).json({ error: 'Push notification service unavailable' });
+    }
+  }
+
   const { tokens = [], userIds = [], title, body, data } = req.body;
   
   if (!tokens.length && !userIds.length) {
