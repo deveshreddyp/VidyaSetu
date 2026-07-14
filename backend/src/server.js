@@ -18,9 +18,9 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
 }));
-// Ensure OPTIONS preflight is handled at Express level as well
-app.options('*', cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
