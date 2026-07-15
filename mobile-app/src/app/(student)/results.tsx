@@ -20,6 +20,8 @@ interface QuizResult {
   max?: number;
   subject?: string;
   createdAt?: any;
+  isPass?: boolean;
+  isAbsent?: boolean;
 }
 
 export default function StudentResultsScreen() {
@@ -48,7 +50,9 @@ export default function StudentResultsScreen() {
             mark: r.mark,
             max: r.max,
             percentage: r.max ? Math.round((r.mark / r.max) * 100) : 0,
-            topic: r.isAbsent ? 'Absent' : r.isPass ? 'Pass' : 'Fail'
+            topic: r.subject,
+            isPass: r.isPass,
+            isAbsent: r.isAbsent
           }));
           quizzes = [...excelResults, ...quizzes];
         }
@@ -72,7 +76,15 @@ export default function StudentResultsScreen() {
 
   const renderItem = ({ item }: { item: QuizResult }) => {
     const pct = item.percentage ?? (item.max ? Math.round((item.mark || 0) / item.max * 100) : null);
-    const color = pct === null ? '#64748B' : pct >= 75 ? '#10B981' : pct >= 50 ? '#F59E0B' : '#EF4444';
+    let color = pct === null ? '#64748B' : pct >= 75 ? '#10B981' : pct >= 50 ? '#F59E0B' : '#EF4444';
+    
+    let badgeText = pct !== null ? (pct >= 75 ? 'Good' : pct >= 50 ? 'OK' : 'Needs Work') : 'N/A';
+    if (item.id.startsWith('excel-')) {
+      badgeText = item.isAbsent ? 'Absent' : item.isPass ? 'Pass' : 'Fail';
+      color = item.isAbsent ? '#64748B' : item.isPass ? '#10B981' : '#EF4444';
+    }
+
+    const displayName = item.id.startsWith('excel-') ? item.subject : (item.topic || item.subject || 'Quiz');
 
     return (
       <View style={styles.card}>
@@ -80,14 +92,14 @@ export default function StudentResultsScreen() {
           <Text style={[styles.scoreText, { color }]}>{pct !== null ? `${pct}%` : '—'}</Text>
         </View>
         <View style={styles.info}>
-          <Text style={styles.topic} numberOfLines={1}>{item.topic || item.subject || 'Quiz'}</Text>
+          <Text style={styles.topic} numberOfLines={1}>{displayName}</Text>
           {item.mark !== undefined && item.max !== undefined && (
             <Text style={styles.marks}>{item.mark}/{item.max} marks</Text>
           )}
         </View>
         <View style={[styles.badge, { backgroundColor: color + '22' }]}>
           <Text style={[styles.badgeText, { color }]}>
-            {pct !== null ? (pct >= 75 ? 'Good' : pct >= 50 ? 'OK' : 'Needs Work') : 'N/A'}
+            {badgeText}
           </Text>
         </View>
       </View>

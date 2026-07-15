@@ -6,7 +6,7 @@ import {
   signOut,
   createUserWithEmailAndPassword,
 } from 'firebase/auth';
-import { doc, getDoc, getDocFromServer, getDocFromCache } from 'firebase/firestore';
+import { doc, getDoc, getDocFromServer, getDocFromCache, collection, query, where, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -56,6 +56,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (serverDoc.exists()) {
             role = serverDoc.data().role || 'student';
             fetchedUserData = { id: serverDoc.id, ...serverDoc.data() };
+          } else if (user.email) {
+            // Fallback: Check if user was pre-created by Admin via email
+            const q = query(collection(db, 'users'), where('email', '==', user.email.toLowerCase()));
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+              const existingDoc = querySnapshot.docs[0];
+              role = existingDoc.data().role || 'student';
+              fetchedUserData = { id: existingDoc.id, ...existingDoc.data() };
+              
+              // Migrate the document to the correct UID
+              try {
+                await setDoc(userDocRef, { ...existingDoc.data(), uid: user.uid });
+                await deleteDoc(doc(db, 'users', existingDoc.id));
+                fetchedUserData.id = user.uid;
+              } catch (migrateErr) {
+                console.warn('Failed to migrate user doc UID:', migrateErr);
+              }
+            }
           }
         } catch (serverErr) {
           console.warn('Could not fetch role from server, trying cache:', serverErr);

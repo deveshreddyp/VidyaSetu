@@ -107,10 +107,31 @@ export function AuthProvider({ children }) {
       setCurrentUser(user);
       if (user) {
         try {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
+          const userDocRef = doc(db, "users", user.uid);
+          const userDoc = await getDoc(userDocRef);
           if (userDoc.exists()) {
             setUserRole(userDoc.data().role || 'student');
             setUserData({ id: userDoc.id, ...userDoc.data() });
+          } else if (user.email) {
+            // Fallback: Check if user was pre-created by Admin via email
+            const q = query(collection(db, "users"), where("email", "==", user.email.toLowerCase()));
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+              const existingDoc = querySnapshot.docs[0];
+              setUserRole(existingDoc.data().role || 'student');
+              setUserData({ id: user.uid, ...existingDoc.data() });
+              
+              // Migrate the document to the correct UID
+              try {
+                await setDoc(userDocRef, { ...existingDoc.data(), uid: user.uid });
+                await deleteDoc(doc(db, "users", existingDoc.id));
+              } catch (migrateErr) {
+                console.warn('Failed to migrate user doc UID:', migrateErr);
+              }
+            } else {
+              setUserRole('student'); // Fallback
+              setUserData(null);
+            }
           } else {
             setUserRole('student'); // Fallback
             setUserData(null);
